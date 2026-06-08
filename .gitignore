@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# lokal dev-logg
+dev.log
+
+# Claude Code lokala inställningar (delas inte)
+.claude/settings.local.json
+
+# SQLite WAL-sidofiler (databasen data/skolinsikt.db checkas in, men inte WAL/SHM)
+*.db-wal
+*.db-shm

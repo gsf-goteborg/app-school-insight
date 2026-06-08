@@ -1,26 +1,161 @@
 @import "tailwindcss";
 
+/*
+  Göteborg Stad färgprofil (källa: goteborg.se grafisk profil).
+  Endast officiella färger används. Text på färgade ytor: endast svart eller vitt.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --gbg-blue: #005293;
+  --gbg-blue-dark: #00395f;
+  --gbg-blue-light: #82bbdb;
+  --gbg-green: #6a9a1f;
+  --gbg-green-dark: #4f6f18;
+  --gbg-green-light: #9ec038;
+  --gbg-purple: #7f3f98;
+  --gbg-purple-dark: #5d287d;
+  --gbg-purple-light: #c39bd3;
+  --gbg-orange: #f47815;
+  --gbg-orange-dark: #cf5e00;
+  --gbg-orange-light: #f9b000;
+  --gbg-red: #e8364a;
+  --gbg-red-dark: #e1005e;
+  --gbg-red-light: #f391b1;
+  --gbg-yellow: #fbc46d;
+  --gbg-yellow-dark: #f9a965;
+  --gbg-yellow-light: #fee7b8;
+
+  /* Neutrala ytor och text – varm, lugn greige-palett (mindre kyligt blått) */
+  --surface-app: #f1efe9;
+  --surface-card: #ffffff;
+  --surface-muted: #f5f3ed;
+  --border-subtle: #e5e1d7;
+  --border-strong: #d4cebf;
+  --text-strong: #1e2521;
+  --text-default: #38403a;
+  --text-muted: #6b726a;
+  --text-on-color: #ffffff;
+
+  /* Neutral "chrome" för sidonavigation och sidhuvud – varm bläckton i stället
+     för dominerande marinblått. Brandfärgerna får i stället leva som accenter. */
+  --chrome: #1e2723;
+  --chrome-elevated: #27322c;
+  --chrome-text: #eef1ec;
+  --chrome-muted: #a9b1a8;
+  --chrome-border: rgba(255, 255, 255, 0.10);
+
+  /* Mjuk, skiktad höjd för kort */
+  --shadow-card: 0 1px 2px rgba(24, 32, 27, 0.05), 0 14px 30px -18px rgba(24, 32, 27, 0.20);
+  --shadow-pop: 0 2px 6px rgba(24, 32, 27, 0.07), 0 26px 50px -26px rgba(24, 32, 27, 0.28);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), Georgia, serif;
+
+  --color-primary: var(--gbg-blue);
+  --color-primary-dark: var(--gbg-blue-dark);
+  --color-primary-light: var(--gbg-blue-light);
+  --color-accent: var(--gbg-purple);
+  --color-accent-light: var(--gbg-purple-light);
+
+  /* Semantiska statusfärger för skoldata */
+  --color-positiv: var(--gbg-green);
+  --color-positiv-light: var(--gbg-green-light);
+  --color-neutral: var(--gbg-blue);
+  --color-uppmarksam: var(--gbg-orange);
+  --color-uppmarksam-light: var(--gbg-orange-light);
+  --color-kritisk: var(--gbg-red);
+  --color-kritisk-light: var(--gbg-red-light);
+
+  --color-app: var(--surface-app);
+  --color-card: var(--surface-card);
+  --color-muted: var(--surface-muted);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-ink: var(--text-strong);
+  --color-ink-default: var(--text-default);
+  --color-ink-muted: var(--text-muted);
+
+  --radius-card: 16px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  /* Projektorvänlig basstorlek */
+  font-size: 17px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Brandfärgerna som mjuk atmosfär i hörnen i stället för stora blåa ytor. */
+  background:
+    radial-gradient(1100px 560px at 100% -8%, rgba(0, 82, 147, 0.05), transparent 58%),
+    radial-gradient(900px 520px at -8% 108%, rgba(106, 154, 31, 0.06), transparent 55%),
+    var(--surface-app);
+  background-attachment: fixed;
+  color: var(--text-default);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Datatabeller: klipp rundade hörn på desktop, men låt breda tabeller scrolla
+   i sidled på små skärmar i stället för att tryckas ihop / klippas av. */
+.table-card { overflow: hidden; }
+@media (max-width: 720px) {
+  .table-card { overflow-x: auto; }
+  .table-card > table { min-width: 620px; }
+}
+
+/* Mjuk, samordnad inladdning av sidinnehåll. */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-rise {
+  animation: rise-in 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise { animation: none; }
+}
+
+h1, h2, h3, h4 {
+  color: var(--text-strong);
+  letter-spacing: -0.01em;
+}
+
+/* Tabellsiffror linjerar i datatabeller */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fokusmarkering för tillgänglighet */
+:where(a, button, input, select, [tabindex]):focus-visible {
+  outline: 3px solid var(--gbg-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Utskrift / spara som PDF (§7: exportera aggregerade rapporter).
+   Döljer navigation och chrome, fäller ut innehållet och undviker att
+   bryta kort över sidbrytningar. */
+@media print {
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+  html {
+    font-size: 12px;
+  }
+  body {
+    background: #fff;
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .rounded-\[var\(--radius-card\)\],
+  section {
+    break-inside: avoid;
+  }
 }
