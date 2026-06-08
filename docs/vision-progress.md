@@ -5,9 +5,26 @@
 
 ## 🔁 HANDOFF — current state (read this first)
 
+**🚀 SHIPPED & LIVE:** Deployed to GitHub Pages at **https://gsf-goteborg.github.io/app-school-insight/**
+(repo `gsf-goteborg/app-school-insight`, **public**, SSH remote). Deploy is automatic: any
+`commit → push origin main` re-runs `.github/workflows/deploy.yml` (npm ci → seed → build → deploy,
+~3 min). Pages source = "GitHub Actions". Build basePath is set by the workflow to `/app-school-insight`.
+Status when last left: **green, site verified working** by the user. Ready for the first test group.
+
+**Open (optional) follow-ups — not started:**
+1. A short Swedish "Till testgruppen" intro/feedback note on the start page (what this is + how to give feedback).
+2. Stretch-per-class marker — surface "kan utmanas mer" students on the klass elevlista (the one
+   potential-side gap; the data exists via `getStretchCandidates` in `queries-development.ts`).
+
 **App:** Skolinsikt, a Swedish school-data demo (Next.js 16 / React 19 / Tailwind v4 / ECharts,
 SQLite baked at build time → static site). Fictional Göteborg grundskola **Framtidsskolan**, åk 1–10,
 20 klasser, 400 elever. Fixed demo "today" = **2026-05-15**. All copy Swedish; demodata only.
+**Grade model:** förskoleklass = åk 1, so betyg **åk 7–10** and leaving/exam year = **åk 10**.
+
+**Latest views (post-original-backlog, all shipped + live):** `/behorighet` (Behörighetsprognos —
+illustrative logistic model, åk 4–10, Risk 0–3, `queries-behorighet.ts`); Utredningsskuld
+(`getUtredningsskuld` in `queries-summary.ts`, on start + Analys); Utveckling & potential
+(`queries-development.ts` — tappar mark / stretch / positiv, on start + Analys). `next build` = **449 pages**.
 
 **Conventions:** RSC pages read via the repository layer (`lib/db/queries*.ts`, `all`/`one`, every
 module `import "server-only"`). UI in `components/ui/primitives.tsx` (Card, PageHeader, Section, Stat,
