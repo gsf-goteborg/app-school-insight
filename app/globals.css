@@ -104,6 +104,9 @@ body {
   .table-card { overflow-x: auto; }
   .table-card > table { min-width: 620px; }
 }
+/* Täta rutnät (många kolumner, t.ex. frånvaro/progression per termin):
+   scrolla i sidled på alla skärmbredder i stället för att klippas. */
+.table-card--scroll { overflow-x: auto; }
 
 /* Mjuk, samordnad inladdning av sidinnehåll. */
 @keyframes rise-in {

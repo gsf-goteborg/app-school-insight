@@ -44,8 +44,12 @@ RLS-policyer i `supabase/migrations/` inför en skarp lösning.
 
 ## Vyer
 
-Skolans nuläge (start) · Tidig upptäckt · Årskurser · Klasser · Elev · Analys ·
+Skolans nuläge (start) · Ledningsöversikt (skolledare) · Prioriterade elever ·
+Tidig upptäckt · Behörighetsprognos · Årskurser · Klasser · Elev · Analys ·
 Insatser · Ekonomi & resurser · Personalplanering.
+
+Bedömnings- och frånvarodata finns för fyra läsår (tre historiska + innevarande),
+så att utveckling kan följas över tid på elev-, klass- och skolnivå.
 
 ## Inbyggda demoscenarier (§16)
 

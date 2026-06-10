@@ -38,6 +38,8 @@ export const DEFAULT_ROLE: RoleKey = "skolledare";
 
 export type ViewKey =
   | "start"
+  | "ledning"
+  | "prioritera"
   | "tidig"
   | "behorighet"
   | "arskurs"
@@ -61,6 +63,8 @@ const ALL: RoleKey[] = ["skolledare", "elevhalsa", "forstelarare", "larare"];
 // Behörighetsmatris härledd ur §7.
 export const NAV: NavItem[] = [
   { view: "start", label: "Skolans nuläge", href: "/", roles: ALL },
+  { view: "ledning", label: "Ledningsöversikt", href: "/ledning", roles: ["skolledare"] },
+  { view: "prioritera", label: "Prioriterade elever", href: "/prioritera", roles: ALL },
   { view: "tidig", label: "Tidig upptäckt", href: "/tidig-upptackt", roles: ALL },
   { view: "behorighet", label: "Behörighetsprognos", href: "/behorighet", roles: ALL },
   { view: "arskurs", label: "Årskurser", href: "/arskurs", roles: ALL },

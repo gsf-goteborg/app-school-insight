@@ -1,5 +1,5 @@
 import "server-only";
-import { one } from "./index";
+import { all, one } from "./index";
 
 /**
  * Aggregat för startsidans "Skolans nuläge" – en sammanställning över fyra
@@ -107,6 +107,45 @@ export interface UtredningsskuldSummary {
   /** ...varav varken åtgärdsprogram eller utredning (NEJ) – utredningsskulden. */
   no_action: number;
 }
+/** En elev i utredningsskuldens underlag, med antal ämnen och stödprocess-status. */
+export interface UtredningsskuldStudent {
+  student_id: string;
+  /** Antal ämnen som brister under båda terminerna. */
+  subjects: number;
+  /** JA = åtgärdsprogram, UTREDNING = pågående utredning, NEJ = ingen formell process. */
+  status: "JA" | "UTREDNING" | "NEJ";
+}
+
+/** Per-elev-underlag för utredningsskulden (samma definition som sammanfattningen). */
+export function getUtredningsskuldStudents(): UtredningsskuldStudent[] {
+  return all<UtredningsskuldStudent>(
+    `with failing_omdome as (
+       select wa.student_id, wa.subject
+       from written_assessments wa join students s on s.student_id = wa.student_id
+       where s.grade_level between 2 and 6 and wa.level in ('uppmarksam','stort_behov')
+         and wa.term in ('HT2025','VT2026')
+       group by wa.student_id, wa.subject having count(distinct wa.term) = 2
+     ),
+     failing_betyg as (
+       select sg.student_id, sg.subject
+       from subject_grades sg join students s on s.student_id = sg.student_id
+       where s.grade_level between 7 and 10 and sg.grade in ('F','-')
+         and sg.term in ('HT2025','VT2026')
+       group by sg.student_id, sg.subject having count(distinct sg.term) = 2
+     ),
+     lacking as (
+       select student_id, count(*) subjects from (
+         select * from failing_omdome union select * from failing_betyg
+       ) group by student_id
+     )
+     select l.student_id, l.subjects,
+       case when s.atgardsprogram = 1 then 'JA'
+            when s.utredning_pagaende = 1 then 'UTREDNING'
+            else 'NEJ' end status
+     from lacking l join students s on s.student_id = l.student_id`,
+  );
+}
+
 export function getUtredningsskuld(): UtredningsskuldSummary {
   return (
     one<UtredningsskuldSummary>(
@@ -114,12 +153,14 @@ export function getUtredningsskuld(): UtredningsskuldSummary {
          select wa.student_id
          from written_assessments wa join students s on s.student_id = wa.student_id
          where s.grade_level between 2 and 6 and wa.level in ('uppmarksam','stort_behov')
+           and wa.term in ('HT2025','VT2026')
          group by wa.student_id, wa.subject having count(distinct wa.term) = 2
        ),
        failing_betyg as (
          select sg.student_id
          from subject_grades sg join students s on s.student_id = sg.student_id
          where s.grade_level between 7 and 10 and sg.grade in ('F','-')
+           and sg.term in ('HT2025','VT2026')
          group by sg.student_id, sg.subject having count(distinct sg.term) = 2
        ),
        lacking as (

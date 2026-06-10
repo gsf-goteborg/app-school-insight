@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { PageHeader, Card, Section, Stat, Pill, Note } from "@/components/ui/primitives";
-import { LevelBadge } from "@/components/ui/primitives";
 import { LineChart, BarChart } from "@/components/charts";
 import { InterventionList } from "@/components/intervention-list";
 import { CommentThread } from "@/components/comment-thread";
@@ -13,8 +12,10 @@ import { getInterventionsForStudent, getComments } from "@/lib/db/queries-resour
 import { getStudentSupport } from "@/lib/db/queries-progression";
 import { getStudentWellbeing } from "@/lib/db/queries-wellbeing";
 import { getBehorighetForStudent, bucketMeta } from "@/lib/db/queries-behorighet";
+import { getStudentTrajectory, getStudentTermAbsence } from "@/lib/db/queries-history";
+import { TrajectoryTable } from "@/components/trajectory-table";
 import {
-  levelTrend, gradeTrend, TREND_LABEL, type Trend,
+  levelTrend, gradeTrend, type Trend,
   gradeParagraph, knowledgeParagraph, attendanceParagraph, supportParagraph, wellbeingParagraph, buildNarrative,
 } from "@/lib/text/student-narrative";
 import { pct, num, dateShort, dateLong } from "@/lib/format";
@@ -24,21 +25,7 @@ export function generateStaticParams() {
   return getAllStudents().map((s) => ({ studentId: s.student_id }));
 }
 
-function weekStart(iso: string): string {
-  const d = new Date(iso);
-  const day = (d.getUTCDay() + 6) % 7; // måndag = 0
-  d.setUTCDate(d.getUTCDate() - day);
-  return d.toISOString().slice(0, 10);
-}
-
 const monthFmt = new Intl.DateTimeFormat("sv-SE", { month: "short" });
-
-/** Liten trend-pill för tabeller. */
-function TrendCell({ trend }: { trend: Trend }) {
-  const tone = trend === "positiv" ? "positiv" : trend === "negativ" ? "kritisk" : trend === "neutral" ? "neutral" : "neutral";
-  const arrow = trend === "positiv" ? "↑ " : trend === "negativ" ? "↓ " : trend === "neutral" ? "→ " : "";
-  return <Pill tone={tone}>{arrow}{TREND_LABEL[trend]}</Pill>;
-}
 
 export default async function ElevPage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params;
@@ -57,21 +44,8 @@ export default async function ElevPage({ params }: { params: Promise<{ studentId
   const w12 = attn && attn.w12_total ? attn.w12_absent / attn.w12_total : 0;
   const rise = w4 - w12;
 
-  // Tidslinje – underlag för både veckovis närvaro och månadsvis frånvaro
+  // Tidslinje – underlag för månadsvis frånvaro (innevarande läsår)
   const timeline = getStudentAttendanceTimeline(studentId);
-
-  // Veckovis närvaro
-  const weekMap = new Map<string, { present: number; total: number }>();
-  for (const d of timeline) {
-    const k = weekStart(d.date);
-    const cur = weekMap.get(k) ?? { present: 0, total: 0 };
-    cur.total += 1;
-    if (d.status === "present" || d.status === "late") cur.present += 1;
-    weekMap.set(k, cur);
-  }
-  const weeks = [...weekMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  const weekCats = weeks.map(([k]) => dateShort(k));
-  const weekRates = weeks.map(([, v]) => (v.total ? Math.round((v.present / v.total) * 100) : 0));
 
   // Månadsvis frånvaro (frånvaro = valid_absence | invalid_absence)
   const monthMap = new Map<string, { absent: number; total: number }>();
@@ -83,18 +57,16 @@ export default async function ElevPage({ params }: { params: Promise<{ studentId
     monthMap.set(k, cur);
   }
   const months = [...monthMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  const monthRows = months.map(([k, v]) => {
-    const rate = v.total ? v.absent / v.total : 0;
-    const tone: "kritisk" | "uppmarksam" | "neutral" = rate >= 0.2 ? "kritisk" : rate >= 0.1 ? "uppmarksam" : "neutral";
-    return {
-      key: k,
-      label: monthFmt.format(new Date(`${k}-01`)),
-      rate,
-      tone,
-    };
-  });
+  const monthRows = months.map(([k, v]) => ({
+    key: k,
+    label: monthFmt.format(new Date(`${k}-01`)),
+    rate: v.total ? v.absent / v.total : 0,
+  }));
   const monthCats = monthRows.map((m) => m.label);
   const monthAbsRates = monthRows.map((m) => Math.round(m.rate * 1000) / 10);
+
+  // Frånvaro per termin (fyra läsår)
+  const termAbsence = getStudentTermAbsence(studentId);
 
   const interventions = getInterventionsForStudent(studentId, student.class_id, grade);
   const comments = getComments("student", studentId);
@@ -252,61 +224,39 @@ export default async function ElevPage({ params }: { params: Promise<{ studentId
         </Section>
       )}
 
-      {/* Närvaroutveckling */}
-      <Section title="Närvaroutveckling" description="Närvaro per vecka, läsåret hittills.">
-        <Card className="p-5">
-          <LineChart
-            ariaLabel={`Veckovis närvaro för ${student.first_name} ${student.last_name}`}
-            categories={weekCats}
-            series={[{ name: "Närvaro", data: weekRates }]}
-            yMax={100}
-            valueFormat="pct0"
-            height={280}
-          />
-        </Card>
-      </Section>
-
-      {/* Frånvaro per månad */}
-      <Section title="Frånvaro per månad" description="Andel frånvaro (giltig + ogiltig) per kalendermånad, läsåret hittills.">
-        {monthRows.length === 0 ? (
-          <Card className="p-5 text-[var(--text-muted)]">Ingen frånvarodata registrerad.</Card>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <Card className="p-5">
+      {/* Närvaro och frånvaro – månad (i år) och termin (fyra läsår) i en vy */}
+      <Section
+        title="Närvaro och frånvaro"
+        description="Frånvaroandel (giltig + ogiltig) per månad för innevarande läsår och per termin över upp till fyra läsår."
+      >
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Card className="p-5">
+            <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Per månad · innevarande läsår</p>
+            {monthRows.length === 0 ? (
+              <p className="text-[var(--text-muted)]">Ingen frånvarodata registrerad.</p>
+            ) : (
               <LineChart
                 ariaLabel={`Månadsvis frånvaro för ${student.first_name} ${student.last_name}`}
                 categories={monthCats}
                 series={[{ name: "Frånvaro", data: monthAbsRates }]}
                 valueFormat="pct1"
-                height={280}
+                height={250}
+              />
+            )}
+          </Card>
+          {termAbsence.length >= 3 && (
+            <Card className="p-5">
+              <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Per termin · fyra läsår</p>
+              <LineChart
+                ariaLabel={`Frånvaro per termin för ${student.first_name} ${student.last_name}, upp till fyra läsår`}
+                categories={termAbsence.map((t) => t.label)}
+                series={[{ name: "Frånvaro", data: termAbsence.map((t) => (t.rate != null ? Math.round(t.rate * 1000) / 10 : null)) }]}
+                valueFormat="pct1"
+                height={250}
               />
             </Card>
-            <Card className="overflow-hidden">
-              <table className="w-full text-[15px]">
-                <thead>
-                  <tr className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)] text-left text-sm text-[var(--text-muted)]">
-                    <th className="px-4 py-2.5 font-medium">Månad</th>
-                    <th className="px-4 py-2.5 font-medium">Frånvaro</th>
-                    <th className="px-4 py-2.5 font-medium">Bedömning</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {monthRows.map((m) => (
-                    <tr key={m.key} className="border-b border-[var(--border-subtle)] last:border-0">
-                      <td className="px-4 py-2.5 font-medium capitalize">{m.label}</td>
-                      <td className="px-4 py-2.5 tabular">{pct(m.rate, 1)}</td>
-                      <td className="px-4 py-2.5">
-                        <Pill tone={m.tone}>
-                          {m.tone === "kritisk" ? "Hög" : m.tone === "uppmarksam" ? "Uppmärksammas" : "Normal"}
-                        </Pill>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
-          </div>
-        )}
+          )}
+        </div>
       </Section>
 
       {/* Trivsel och trygghet (wellbeing) */}
@@ -362,11 +312,12 @@ export default async function ElevPage({ params }: { params: Promise<{ studentId
         </Section>
       )}
 
-      {/* Kunskapsutveckling */}
-      <Section title="Kunskapsutveckling" description="Utveckling mellan terminerna med trend HT → VT.">
-        {showLSR && <SkillTable studentId={studentId} />}
-        {showWritten && <WrittenTable studentId={studentId} />}
-        {showGrades && <GradeTable studentId={studentId} />}
+      {/* Kunskapsutveckling över tid */}
+      <Section
+        title="Kunskapsutveckling över tid"
+        description="Alla terminer med registrerad bedömning – upp till fyra läsår. Trenden beräknas över hela serien: de två första terminerna jämförs med de två senaste (minst tre terminer krävs)."
+      >
+        <KnowledgeTrajectory studentId={studentId} grade={grade} />
       </Section>
 
       {/* Insatser, tidslinje, kommentarer */}
@@ -410,86 +361,27 @@ export default async function ElevPage({ params }: { params: Promise<{ studentId
   );
 }
 
-function TwoTermTable({ rows }: { rows: { label: string; ht?: Level; vt?: Level }[] }) {
-  return (
-    <Card className="overflow-hidden">
-      <table className="w-full text-[15px]">
-        <thead>
-          <tr className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)] text-left text-sm text-[var(--text-muted)]">
-            <th className="px-4 py-2.5 font-medium">Område / ämne</th>
-            <th className="px-4 py-2.5 font-medium">{TERMS[0].label}</th>
-            <th className="px-4 py-2.5 font-medium">{TERMS[1].label}</th>
-            <th className="px-4 py-2.5 font-medium">Trend</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.label} className="border-b border-[var(--border-subtle)] last:border-0">
-              <td className="px-4 py-2.5 font-medium">{r.label}</td>
-              <td className="px-4 py-2.5">{r.ht ? <LevelBadge level={r.ht} /> : "–"}</td>
-              <td className="px-4 py-2.5">{r.vt ? <LevelBadge level={r.vt} /> : "–"}</td>
-              <td className="px-4 py-2.5"><TrendCell trend={levelTrend(r.ht, r.vt)} /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </Card>
-  );
-}
-
-function SkillTable({ studentId }: { studentId: string }) {
-  const skills = getStudentSkills(studentId);
-  const rows = SKILL_AREAS.map((a) => ({
-    label: a.label,
-    ht: skills.find((s) => s.area === a.key && s.term === "HT2025")?.level,
-    vt: skills.find((s) => s.area === a.key && s.term === "VT2026")?.level,
-  }));
-  return <TwoTermTable rows={rows} />;
-}
-
-function WrittenTable({ studentId }: { studentId: string }) {
-  const w = getStudentWritten(studentId);
-  const subjects = [...new Set(w.map((x) => x.subject))];
-  const rows = subjects.map((subj) => ({
-    label: subj,
-    ht: w.find((x) => x.subject === subj && x.term === "HT2025")?.level,
-    vt: w.find((x) => x.subject === subj && x.term === "VT2026")?.level,
-  }));
-  return <TwoTermTable rows={rows} />;
-}
-
-function GradeTable({ studentId }: { studentId: string }) {
-  const g = getStudentGrades(studentId);
+/** Ämne × termin-rutnät över alla läsår med data (betyg + nivåer). */
+function KnowledgeTrajectory({ studentId, grade }: { studentId: string; grade: number }) {
+  const trajectory = getStudentTrajectory(studentId, grade);
   const nat = getStudentNationalTests(studentId);
-  const subjects = [...new Set(g.map((x) => x.subject))];
+  const natBySubject = new Map(nat.map((n) => [n.subject, n.grade]));
+  if (trajectory.gradeRows.length === 0 && trajectory.levelRows.length === 0) {
+    return <Card className="p-5 text-[var(--text-muted)]">Inga registrerade bedömningar.</Card>;
+  }
   return (
-    <Card className="overflow-hidden">
-      <table className="w-full text-[15px]">
-        <thead>
-          <tr className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)] text-left text-sm text-[var(--text-muted)]">
-            <th className="px-4 py-2.5 font-medium">Ämne</th>
-            <th className="px-4 py-2.5 font-medium">{TERMS[0].label}</th>
-            <th className="px-4 py-2.5 font-medium">{TERMS[1].label}</th>
-            <th className="px-4 py-2.5 font-medium">Trend</th>
-            <th className="px-4 py-2.5 font-medium">Nationellt prov</th>
-          </tr>
-        </thead>
-        <tbody>
-          {subjects.map((subj) => {
-            const ht = g.find((x) => x.subject === subj && x.term === "HT2025")?.grade;
-            const vt = g.find((x) => x.subject === subj && x.term === "VT2026")?.grade;
-            return (
-              <tr key={subj} className="border-b border-[var(--border-subtle)] last:border-0">
-                <td className="px-4 py-2.5 font-medium">{subj}</td>
-                <td className="px-4 py-2.5 tabular">{ht ?? "–"}</td>
-                <td className="px-4 py-2.5 tabular">{vt ?? "–"}</td>
-                <td className="px-4 py-2.5"><TrendCell trend={gradeTrend(ht, vt)} /></td>
-                <td className="px-4 py-2.5 tabular">{nat.find((x) => x.subject === subj)?.grade ?? "–"}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </Card>
+    <div>
+      <TrajectoryTable
+        trajectory={trajectory}
+        rows={trajectory.gradeRows}
+        caption="Betyg (åk 7–10)"
+        natBySubject={natBySubject.size > 0 ? natBySubject : undefined}
+      />
+      <TrajectoryTable
+        trajectory={trajectory}
+        rows={trajectory.levelRows}
+        caption="Bedömningsnivåer – läsa/skriva/räkna och skriftliga omdömen (åk 1–6)"
+      />
+    </div>
   );
 }

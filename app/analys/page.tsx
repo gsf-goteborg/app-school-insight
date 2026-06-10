@@ -3,12 +3,12 @@ import { PageHeader, Card, Section, Note, Pill, Stat } from "@/components/ui/pri
 import { Fragebank } from "@/components/ui/questions";
 import { Heatmap, SankeyChart, BarChart } from "@/components/charts";
 import { AnalysScatter } from "@/components/analys-scatter";
+import { ResultMatrix } from "@/components/result-matrix";
 import {
   getWeekdayAbsence, getAbsenceVsMerit, getReadingLevelFlow, getAverageMerit,
 } from "@/lib/db/queries";
 import { getUtredningsskuld } from "@/lib/db/queries-summary";
-import { getDevelopmentSummary, getLosingGround } from "@/lib/db/queries-development";
-import Link from "next/link";
+import { getDevelopmentSummary } from "@/lib/db/queries-development";
 import { getAbsenceByTrygghet } from "@/lib/db/queries-wellbeing";
 import { getSchoolTermTrends, type TermMetric } from "@/lib/db/queries-trend";
 import { GRADES, LEVELS, CURRENT_TERM, type Level } from "@/lib/constants";
@@ -71,7 +71,6 @@ export default function AnalysPage() {
 
   // Utveckling och potential
   const devSummary = getDevelopmentSummary();
-  const losingGround = getLosingGround();
 
   // Utredningsskuld: ihållande svårigheter utan åtgärdsprogram/utredning
   const us = getUtredningsskuld();
@@ -133,41 +132,22 @@ export default function AnalysPage() {
         title="Utveckling och potential"
         description="Att följa varje elevs utveckling mot sin potential – inte bara dem med svårigheter. Förändring mellan höst- och vårterminen."
       >
-        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mb-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Stat label="Utvecklats positivt" value={num(devSummary.positive_movers)} tone="positiv" hint="flyttat fram sina resultat" />
           <Stat label="Tappar mark" value={num(devSummary.losing_ground)} tone="uppmarksam" hint="sjunker från en god nivå" />
           <Stat label="Kan utmanas mer" value={num(devSummary.stretch)} tone="info" hint="ligger högt – stretch" />
         </div>
-        <Card className="p-5">
-          <p className="mb-3 text-sm font-semibold text-[var(--text-muted)]">
-            Tappar mark – elever att uppmärksamma för att inte tappa potential
-          </p>
-          {losingGround.length === 0 ? (
-            <p className="text-[var(--text-muted)]">Inga elever sjunker tydligt från en god nivå just nu.</p>
-          ) : (
-            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {losingGround.map((d) => (
-                <li key={d.student_id}>
-                  <Link
-                    href={`/elev/${d.student_id}`}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] px-3 py-2 hover:bg-[var(--surface-muted)]"
-                  >
-                    <span className="min-w-0">
-                      <span className="font-medium hover:text-[var(--gbg-blue)] hover:underline">{d.name}</span>
-                      <span className="ml-2 text-sm text-[var(--text-muted)]">åk {d.grade_level} · {d.class_id}</span>
-                    </span>
-                    <span className="shrink-0 text-sm text-[var(--text-muted)]">{d.detail}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="mt-3 border-t border-[var(--border-subtle)] pt-3 text-sm text-[var(--text-muted)]">
-            Dessa elever presterar fortfarande godtagbart och flaggas inte som risk – men en tydlig nedgång från en god
-            nivå är lätt att missa. {num(devSummary.stretch)} elever ligger samtidigt högt och kan utmanas mer för att
-            nå sin fulla potential. Mönster att följa upp, inte färdiga slutsatser.
-          </p>
-        </Card>
+        <p className="text-sm text-[var(--text-muted)]">
+          Vilka elever som rör sig – och åt vilket håll – syns per elev i resultatmatrisen nedan; &quot;kan utmanas
+          mer&quot; markeras dessutom i respektive klass elevlista.
+        </p>
+      </Section>
+
+      <Section
+        title="Resultatmatris: nivå × trend"
+        description="Varje elev placerad efter nuvarande resultatnivå och flerterminstrend (upp till fyra läsår) – fyra grupper som kräver olika slags uppmärksamhet."
+      >
+        <ResultMatrix />
       </Section>
 
       <Section

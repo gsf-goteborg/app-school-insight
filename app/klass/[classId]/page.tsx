@@ -14,6 +14,9 @@ import { getInterventionsForClass, getComments } from "@/lib/db/queries-resource
 import { getClassWellbeing } from "@/lib/db/queries-wellbeing";
 import { getClassInsights } from "@/lib/db/queries-insights";
 import { getBehorighetForecasts, bucketMeta } from "@/lib/db/queries-behorighet";
+import { getDevelopment, type DevStudent } from "@/lib/db/queries-development";
+import { getLongTermTrends, getClassMonthlyAbsence, getClassTermAbsence, type StudentLongTrend } from "@/lib/db/queries-history";
+import { AbsenceGrid } from "@/components/absence-grid";
 import { InsightCards } from "@/components/ui/insight-cards";
 import { pct, num } from "@/lib/format";
 import { CURRENT_TERM, SKILL_AREAS, GRADE_MARKS, CLASS_IDS, type GradeMark } from "@/lib/constants";
@@ -48,6 +51,16 @@ export default async function KlassPage({ params }: { params: Promise<{ classId:
     ? new Map(getBehorighetForecasts().filter((f) => f.class_id === classId).map((f) => [f.student_id, f]))
     : null;
 
+  // Utvecklingslins (HT → VT): lyfter både "kan utmanas mer" och "tappar mark".
+  const devMap = new Map(
+    getDevelopment().filter((d) => d.class_id === classId).map((d) => [d.student_id, d]),
+  );
+  // Flerterminstrend (upp till fyra läsår) – fångar långsamma nedgångar som
+  // HT→VT-linsen missar.
+  const longTrendMap = new Map(
+    getLongTermTrends().filter((t) => t.class_id === classId).map((t) => [t.student_id, t]),
+  );
+
   // Per elev: närvaro, trend, trygghet, följ upp-flagga
   const rows = students.map((s) => {
     const a = attnMap.get(s.student_id);
@@ -60,7 +73,9 @@ export default async function KlassPage({ params }: { params: Promise<{ classId:
     const wb = wellbeing.byStudent.get(s.student_id) ?? null;
     const lowTrygghet = wb ? wb.trygghet <= 2 : false;
     const followUp = absRate >= 0.1 || rise >= 0.05 || kAttn >= 3 || lowTrygghet;
-    return { s, rate, absRate, rise, kAttn, wb, lowTrygghet, followUp };
+    const dev = devMap.get(s.student_id) ?? null;
+    const longTrend = longTrendMap.get(s.student_id) ?? null;
+    return { s, rate, absRate, rise, kAttn, wb, lowTrygghet, followUp, dev, longTrend };
   });
   const followUpCount = rows.filter((r) => r.followUp).length;
 
@@ -94,22 +109,22 @@ export default async function KlassPage({ params }: { params: Promise<{ classId:
       </div>
 
       {/* Elevlista */}
-      <Section title="Elevlista" description="Markerade elever bör följas upp utifrån närvaro eller resultat.">
+      <Section title="Elevlista" description="Markerade elever bör följas upp utifrån närvaro eller resultat. Utvecklingskolumnen lyfter även elever som kan utmanas mer eller tappar mark.">
         <Card className="table-card">
           <table className="w-full text-[15px]">
             <thead>
               <tr className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)] text-left text-sm text-[var(--text-muted)]">
                 <th className="px-4 py-2.5 font-medium">Elev</th>
                 <th className="px-4 py-2.5 font-medium">Närvaro</th>
-                <th className="px-4 py-2.5 font-medium">Frånvarotrend</th>
                 <th className="px-4 py-2.5 font-medium">Trygghet</th>
                 {showBehorighet && <th className="px-4 py-2.5 font-medium">Behörighet</th>}
+                <th className="px-4 py-2.5 font-medium">Utveckling</th>
                 <th className="px-4 py-2.5 font-medium">Att uppmärksamma</th>
                 <th className="px-4 py-2.5 font-medium" />
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ s, rate, rise, kAttn, wb, lowTrygghet, followUp }) => (
+              {rows.map(({ s, rate, kAttn, wb, lowTrygghet, followUp, dev, longTrend }) => (
                 <tr key={s.student_id} className="border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--surface-muted)]">
                   <td className="px-4 py-2.5">
                     <Link href={`/elev/${s.student_id}`} className="font-medium hover:text-[var(--gbg-blue)] hover:underline">
@@ -118,11 +133,6 @@ export default async function KlassPage({ params }: { params: Promise<{ classId:
                     {followUp && <span className="ml-2"><Pill tone="uppmarksam">Följ upp</Pill></span>}
                   </td>
                   <td className="px-4 py-2.5 tabular">{pct(rate, 0)}</td>
-                  <td className="px-4 py-2.5 tabular">
-                    {rise > 0.03 ? <span className="text-[var(--gbg-orange-dark)]">↑ {pct(rise, 0)}</span>
-                      : rise < -0.03 ? <span className="text-[var(--gbg-green-dark)]">↓ {pct(-rise, 0)}</span>
-                      : <span className="text-[var(--text-muted)]">stabil</span>}
-                  </td>
                   <td className="px-4 py-2.5 tabular">
                     {wb ? (
                       lowTrygghet
@@ -145,6 +155,7 @@ export default async function KlassPage({ params }: { params: Promise<{ classId:
                       })()}
                     </td>
                   )}
+                  <td className="px-4 py-2.5"><DevBadge dev={dev} longTrend={longTrend} /></td>
                   <td className="px-4 py-2.5">{kAttn > 0 ? `${kAttn} ämnen/områden` : "–"}</td>
                   <td className="px-4 py-2.5 text-right">
                     <Link href={`/elev/${s.student_id}`} className="text-sm font-semibold text-[var(--gbg-blue)] hover:underline">Öppna →</Link>
@@ -154,6 +165,14 @@ export default async function KlassPage({ params }: { params: Promise<{ classId:
             </tbody>
           </table>
         </Card>
+      </Section>
+
+      {/* Frånvaro över tid */}
+      <Section
+        title="Frånvaro över tid"
+        description="Frånvaroandel per elev – per månad för innevarande läsår eller per termin över upp till fyra läsår. Färgerna markerar nivå; klicka på en elev för hela bilden."
+      >
+        <AbsenceGrid monthly={getClassMonthlyAbsence(classId)} byTerm={getClassTermAbsence(classId)} />
       </Section>
 
       {/* Resultat på gruppnivå */}
@@ -200,6 +219,41 @@ export default async function KlassPage({ params }: { params: Promise<{ classId:
 
       <Note tone="info">Demodata. Undvik att dra slutsatser om enskilda elever utan kompletterande information.</Note>
     </div>
+  );
+}
+
+/**
+ * Utvecklingslinsen per elev: stretch ("kan utmanas mer"), tappar mark eller
+ * positiv rörelse inom läsåret – plus en markör när flerterminstrenden över
+ * upp till fyra läsår pekar nedåt.
+ */
+function DevBadge({ dev, longTrend }: { dev: DevStudent | null; longTrend: StudentLongTrend | null }) {
+  const fallingLong = longTrend?.trend === "negativ";
+  const longMarker = fallingLong ? (
+    <span className="text-sm font-medium text-[var(--gbg-red-dark)]" title={longTrend!.detail}>
+      ↘ över tid
+    </span>
+  ) : null;
+
+  let inYear: React.ReactNode = null;
+  if (dev && dev.category === "stretch") {
+    inYear = <span title={dev.detail}><Pill tone="info">Kan utmanas mer</Pill></span>;
+  } else if (dev && dev.category === "tappar") {
+    inYear = <span title={dev.detail}><Pill tone="uppmarksam">Tappar mark</Pill></span>;
+  } else if (dev && dev.category === "positiv") {
+    inYear = (
+      <span className="text-sm text-[var(--gbg-green-dark)]" title={dev.detail}>
+        ↗ förbättras
+      </span>
+    );
+  }
+
+  if (!inYear && !longMarker) return <span className="text-[var(--text-muted)]">–</span>;
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      {inYear}
+      {longMarker}
+    </span>
   );
 }
 

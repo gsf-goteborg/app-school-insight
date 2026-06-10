@@ -82,6 +82,20 @@ create table attendance_records (
 create index idx_attendance_student_date on attendance_records(student_id, date);
 create index idx_attendance_date on attendance_records(date);
 
+-- Historisk närvaro per termin (tre tidigare läsår). Dagliga närvarorader
+-- finns endast för innevarande läsår; historiken är terminsaggregat – samma
+-- upplösning som skolans egen flerårsrapport för frånvaro.
+create table attendance_term_history (
+  history_id  integer primary key autoincrement,
+  student_id  text not null references students(student_id),
+  term        text not null references school_terms(key),
+  days_total  integer not null,
+  days_absent integer not null,
+  is_demo     integer not null default 1
+);
+create index idx_attendance_history_student on attendance_term_history(student_id);
+create index idx_attendance_history_term on attendance_term_history(term);
+
 create table literacy_numeracy_assessments (
   assessment_id     integer primary key autoincrement,
   student_id        text not null references students(student_id),

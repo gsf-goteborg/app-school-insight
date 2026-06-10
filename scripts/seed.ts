@@ -12,6 +12,7 @@ import {
   CLASS_SUFFIXES,
   STUDENTS_PER_CLASS,
   TERMS,
+  ALL_TERMS,
   GRADED_SUBJECTS,
   WRITTEN_SUBJECTS,
   NATIONAL_TEST_SUBJECTS,
@@ -53,6 +54,26 @@ function gauss2(mean: number, sd: number) {
   return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
+
+// Tredje RNG-ström för HISTORISKA bedömningar (tre tidigare läsår). Egen ström
+// så att varken de kurerade scenariona (rng) eller demografin (rng2) rubbas.
+const rng3 = mulberry32(13572468);
+const rnd3 = () => rng3();
+function gauss3(mean: number, sd: number) {
+  const u = 1 - rnd3();
+  const v = rnd3();
+  return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+const pick3 = <T,>(arr: readonly T[]): T => arr[Math.floor(rnd3() * arr.length)];
+
+// Fjärde RNG-ström för historisk NÄRVARO (terminsaggregat, tre tidigare läsår).
+const rng4 = mulberry32(98761234);
+const rnd4 = () => rng4();
+function gauss4(mean: number, sd: number) {
+  const u = 1 - rnd4();
+  const v = rnd4();
+  return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
 
 // ----------------------------- Namn -----------------------------
 // Anonymiserade namn: varje person får ett unikt löpnummer (name1, name2, …).
@@ -486,6 +507,91 @@ for (let m = 0; m < MONTHS.length; m++) {
   hrRows.push([MONTHS[m], +shortRate.toFixed(4), +longRate.toFixed(4)]);
 }
 
+// ----------------------------- Historiska bedömningar (tre tidigare läsår) -----------------------------
+// Longitudinell historik så att utveckling kan följas över tid (som i skolans
+// progressionsrapport). Genereras BAKLÄNGES från elevens nuvarande nivå med en
+// per-elev-trend: ca 16 % har förbättrats över åren, ca 16 % har försämrats,
+// resten ligger stabilt. Endast bedömningsdata (betyg/omdömen/LSR) – närvaro
+// och trivselenkät finns bara för innevarande läsår. Egen RNG-ström (rng3).
+const HIST_YEARS: { ht: string; vt: string; back: number }[] = [
+  { ht: "HT2024", vt: "VT2025", back: 1 },
+  { ht: "HT2023", vt: "VT2024", back: 2 },
+  { ht: "HT2022", vt: "VT2023", back: 3 },
+];
+let histGradeRows = 0, histWrittenRows = 0, histLnaRows = 0;
+
+for (const s of students) {
+  // Trend per elev: positiv lutning = eleven har förbättrats fram till idag
+  // (historiska värden lägre), negativ = eleven låg högre förr.
+  const r = rnd3();
+  const slope = r < 0.16 ? 0.022 : r < 0.32 ? -0.022 : gauss3(0, 0.006);
+
+  for (const y of HIST_YEARS) {
+    const gradeThen = s.grade - y.back;
+    if (gradeThen < 1) continue;
+
+    for (const [termKey, termsBack] of [[y.ht, y.back * 2], [y.vt, y.back * 2 - 1]] as const) {
+      // Betyg (åk 7–9 historiskt – ingen nuvarande elev har redan gått åk 10)
+      if (gradeThen >= 7) {
+        for (const subj of GRADED_SUBJECTS) {
+          const subjBias =
+            subj === "Matematik" ? -0.06 :
+            subj === "Moderna språk" ? -0.04 :
+            subj === "Fysik" || subj === "Kemi" ? -0.03 : 0;
+          const slopeS = slope + gauss3(0, 0.006);
+          const score = clamp(s.ability + subjBias - slopeS * termsBack + gauss3(0, 0.06), 0, 1);
+          gradeRows.push([s.id, termKey, subj, markFromScore(score), false]);
+          histGradeRows++;
+        }
+      } else if (gradeThen >= 2) {
+        // Skriftliga omdömen (åk 2–6 historiskt; engelska från åk 3)
+        for (const subj of WRITTEN_SUBJECTS) {
+          if (subj === "Engelska" && gradeThen < 3) continue;
+          const subjBias = subj === "Matematik" ? -0.05 : 0;
+          const slopeS = slope + gauss3(0, 0.006);
+          const base = clamp(s.ability + subjBias - slopeS * termsBack + gauss3(0, 0.08), 0.02, 0.99);
+          const level = levelFromScore(base * 100);
+          writtenRows.push([s.id, termKey, subj, level, pick3(WRITTEN_COMMENTS[level])]);
+          histWrittenRows++;
+        }
+      }
+      // Läsa/skriva/räkna (åk 1–4 historiskt; kan överlappa omdömen åk 2–4)
+      if (gradeThen <= 4) {
+        for (const area of ["reading", "writing", "numeracy"] as const) {
+          const slopeS = slope + gauss3(0, 0.006);
+          const score = clamp(s.ability * 100 - slopeS * 100 * termsBack + gauss3(0, 8), 5, 99);
+          const level = levelFromScore(score);
+          lnaRows.push([s.id, termKey, area, level, Math.round(score), pick3(LNA_COMMENTS[level])]);
+          histLnaRows++;
+        }
+      }
+    }
+  }
+}
+
+// ----------------------------- Historisk närvaro (terminsaggregat) -----------------------------
+// Frånvaro per termin för tre tidigare läsår, så att frånvaro kan följas över
+// tid (som skolans Qlik-rapport "Frånvaro – Progression – Termin"). Frånvaro
+// är trögrörlig: elevens nuvarande frånvaronivå skrivs bakåt med en per-elev-
+// drift – ca 15 % av eleverna har en frånvaro som vuxit fram över åren, ca
+// 10 % har förbättrats, resten ligger stabilt kring sin bas. Egen ström (rng4).
+const attendanceHistoryRows: Val[][] = [];
+for (const s of students) {
+  const r = rnd4();
+  // Positiv drift = frånvaron har ÖKAT fram till idag (lägre förr).
+  const drift = r < 0.15 ? 0.012 : r < 0.25 ? -0.008 : gauss4(0, 0.002);
+  for (const y of HIST_YEARS) {
+    const gradeThen = s.grade - y.back;
+    if (gradeThen < 1) continue;
+    for (const [termKey, termsBack] of [[y.ht, y.back * 2], [y.vt, y.back * 2 - 1]] as const) {
+      const isHt = termKey.startsWith("HT");
+      const daysTotal = Math.round(clamp(gauss4(isHt ? 88 : 98, 2), 80, 104));
+      const rate = clamp(s.absenceBase - drift * termsBack + gauss4(0, 0.012), 0.0, 0.6);
+      attendanceHistoryRows.push([s.id, termKey, daysTotal, Math.round(rate * daysTotal)]);
+    }
+  }
+}
+
 // ----------------------------- Datamängder -----------------------------
 // En källa, två mål: SQLite-databasen (primär) och supabase/seed.sql (framtida).
 interface Dataset { table: string; cols: string[]; rows: Val[][] }
@@ -495,12 +601,13 @@ const datasets: Dataset[] = [
     ["forstelarare", "Förstelärare"], ["larare", "Lärare"],
   ] },
   { table: "school_terms", cols: ["key", "label", "start_date", "end_date"],
-    rows: TERMS.map((t) => [t.key, t.label, t.start, t.end]) },
+    rows: ALL_TERMS.map((t) => [t.key, t.label, t.start, t.end]) },
   { table: "staff", cols: ["staff_id", "first_name", "last_name", "role", "arbetslag", "fte", "sick_share", "employment_type", "years_employed"], rows: staffRows },
   { table: "classes", cols: ["class_id", "grade_level", "suffix", "arbetslag", "mentor_staff_id", "socioeconomic_index"], rows: classRows },
   { table: "students", cols: ["student_id", "first_name", "last_name", "grade_level", "class_id", "gender", "active", "extra_anpassning", "atgardsprogram", "utredning_pagaende"], rows: studentRows },
   { table: "staff_assignments", cols: ["assignment_id", "staff_id", "class_id", "subject", "grade_level", "hours_per_week", "is_qualified"], rows: assignRows },
   { table: "attendance_records", cols: ["student_id", "date", "status", "minutes_absent"], rows: attendanceRows },
+  { table: "attendance_term_history", cols: ["student_id", "term", "days_total", "days_absent"], rows: attendanceHistoryRows },
   { table: "literacy_numeracy_assessments", cols: ["student_id", "term", "area", "level", "progression_score", "comment"], rows: lnaRows },
   { table: "written_assessments", cols: ["student_id", "term", "subject", "level", "comment"], rows: writtenRows },
   { table: "subject_grades", cols: ["student_id", "term", "subject", "grade", "is_final"], rows: gradeRows },
@@ -549,7 +656,7 @@ parts.push("begin;");
 parts.push("-- Rensa befintlig demodata (idempotent omseedning).");
 parts.push(`truncate table
   intervention_followups, interventions, comments,
-  attendance_records, literacy_numeracy_assessments, written_assessments,
+  attendance_records, attendance_term_history, literacy_numeracy_assessments, written_assessments,
   subject_grades, national_tests, wellbeing_surveys, staff_assignments, students, classes, staff,
   budget_items, financial_forecasts, funding_parameters, hr_monthly, school_terms, user_roles
   restart identity cascade;`);
@@ -569,4 +676,5 @@ console.log(`  närvarorader: ${attendanceRows.length}`);
 console.log(`  LSR-bedömningar: ${lnaRows.length}`);
 console.log(`  omdömen: ${writtenRows.length}`);
 console.log(`  betyg: ${gradeRows.length}, nationella prov: ${natRows.length}`);
+console.log(`  historik (3 läsår): betyg ${histGradeRows}, omdömen ${histWrittenRows}, LSR ${histLnaRows}, närvaroterminer ${attendanceHistoryRows.length}`);
 console.log(`  insatser: ${interventions.length}, budgetrader: ${budgetRows.length}`);

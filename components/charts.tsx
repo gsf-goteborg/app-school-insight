@@ -2,6 +2,7 @@
 
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
+import { useRouter } from "next/navigation";
 
 // Göteborg-anpassad seriepalett.
 const SERIES = ["#005293", "#6a9a1f", "#7f3f98", "#f47815", "#e8364a", "#82bbdb", "#9ec038", "#c39bd3"];
@@ -182,6 +183,78 @@ export function ScatterChart({
         }],
       }}
     />
+  );
+}
+
+// --- Grupperad scatter (nivå × trend-matris) ---
+export function GroupedScatter({
+  groups, xName, yName, height, ariaLabel, xLines = [], yLines = [], linkPrefix,
+}: {
+  groups: { name: string; color: string; points: { x: number; y: number; label: string; id?: string }[] }[];
+  xName: string;
+  yName: string;
+  height?: number;
+  ariaLabel: string;
+  /** Lodräta hjälplinjer (x-värden), t.ex. nivågränser. */
+  xLines?: number[];
+  /** Vågräta hjälplinjer (y-värden), t.ex. trend = 0. */
+  yLines?: number[];
+  /** Om satt: klick på en punkt navigerar till `linkPrefix` + punktens id. */
+  linkPrefix?: string;
+}) {
+  const router = useRouter();
+  const option: EChartsOption = {
+    tooltip: {
+      trigger: "item",
+      formatter: (p) => (p as unknown as { data: [number, number, string] }).data[2],
+    },
+    legend: { bottom: 0, icon: "circle" },
+    grid: { left: 48, right: 20, top: 30, bottom: 60, containLabel: true },
+    xAxis: { type: "value", name: xName, nameLocation: "middle", nameGap: 28, splitLine: { lineStyle: { color: GRID } }, axisLabel: { color: AXIS } },
+    yAxis: { type: "value", name: yName, splitLine: { lineStyle: { color: GRID } }, axisLabel: { color: AXIS } },
+    series: groups.map((g, i) => ({
+      name: g.name,
+      type: "scatter" as const,
+      symbolSize: 9,
+      cursor: linkPrefix ? "pointer" : "default",
+      itemStyle: { color: g.color, opacity: 0.65 },
+      data: g.points.map((p) => [p.x, p.y, p.label, p.id ?? null]),
+      ...(i === 0
+        ? {
+            markLine: {
+              silent: true,
+              symbol: "none",
+              label: { show: false },
+              lineStyle: { color: "#5b6b77", type: "dashed" as const, width: 1.5 },
+              data: [
+                ...xLines.map((x) => ({ xAxis: x })),
+                ...yLines.map((y) => ({ yAxis: y })),
+              ],
+            },
+          }
+        : {}),
+    })),
+  };
+  return (
+    <div role="img" aria-label={ariaLabel}>
+      <ReactECharts
+        option={{ ...BASE, ...option }}
+        style={{ height: height ?? 300 }}
+        opts={{ renderer: "svg" }}
+        notMerge
+        lazyUpdate
+        onEvents={
+          linkPrefix
+            ? {
+                click: (p: { data?: [number, number, string, string | null] }) => {
+                  const id = p.data?.[3];
+                  if (id) router.push(`${linkPrefix}${id}`);
+                },
+              }
+            : undefined
+        }
+      />
+    </div>
   );
 }
 

@@ -4,7 +4,11 @@
 /** Fast "idag" för demon: mitt i vårterminen 2026. Trender beräknas mot detta datum. */
 export const DEMO_TODAY = "2026-05-15";
 
-export type TermKey = "HT2025" | "VT2026";
+export type TermKey =
+  | "HT2022" | "VT2023"
+  | "HT2023" | "VT2024"
+  | "HT2024" | "VT2025"
+  | "HT2025" | "VT2026";
 
 export interface Term {
   key: TermKey;
@@ -19,6 +23,40 @@ export const TERMS: Term[] = [
 ];
 
 export const CURRENT_TERM: TermKey = "VT2026";
+
+// --- Historiska terminer (longitudinell data, fyra läsår) ---
+// Bedömningshistorik (betyg/omdömen/LSR) finns för tre tidigare läsår, så att
+// utveckling kan följas över tid – som i skolans egen progressionsrapport.
+// Närvaro och trivselenkät finns endast för innevarande läsår.
+export const ALL_TERMS: Term[] = [
+  { key: "HT2022", label: "Höstterminen 2022", start: "2022-08-15", end: "2022-12-20" },
+  { key: "VT2023", label: "Vårterminen 2023", start: "2023-01-09", end: "2023-06-09" },
+  { key: "HT2023", label: "Höstterminen 2023", start: "2023-08-14", end: "2023-12-19" },
+  { key: "VT2024", label: "Vårterminen 2024", start: "2024-01-08", end: "2024-06-07" },
+  { key: "HT2024", label: "Höstterminen 2024", start: "2024-08-12", end: "2024-12-19" },
+  { key: "VT2025", label: "Vårterminen 2025", start: "2025-01-07", end: "2025-06-10" },
+  ...TERMS,
+];
+
+/** Terminsnycklar i kronologisk ordning (äldst först). */
+export const TERM_SEQUENCE: string[] = ALL_TERMS.map((t) => t.key);
+
+/** Kort terminsetikett, t.ex. "HT 2024". */
+export function termShort(key: string): string {
+  return `${key.slice(0, 2)} ${key.slice(2)}`;
+}
+
+/**
+ * Vilken årskurs en elev (med nuvarande årskurs `currentGrade`) gick i under en
+ * given termin, eller null om eleven inte hade börjat (åk < 1).
+ */
+export function gradeAtTerm(currentGrade: number, termKey: string): number | null {
+  const idx = TERM_SEQUENCE.indexOf(termKey);
+  if (idx === -1) return null;
+  const yearsBack = Math.floor((TERM_SEQUENCE.length - 1 - idx) / 2);
+  const g = currentGrade - yearsBack;
+  return g >= 1 ? g : null;
+}
 
 export const GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 export type Grade = (typeof GRADES)[number];

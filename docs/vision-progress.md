@@ -12,9 +12,10 @@
 Status when last left: **green, site verified working** by the user. Ready for the first test group.
 
 **Open (optional) follow-ups — not started:**
-1. A short Swedish "Till testgruppen" intro/feedback note on the start page (what this is + how to give feedback).
-2. Stretch-per-class marker — surface "kan utmanas mer" students on the klass elevlista (the one
-   potential-side gap; the data exists via `getStretchCandidates` in `queries-development.ts`).
+1. A short Swedish "Till testgruppen" intro/feedback note on the start page (what this is + how to
+   give feedback — needs the user to specify the feedback channel).
+2. Multi-year frånvarotrend as a /prioritera lens (data exists in `attendance_term_history`; offered,
+   user hasn't asked yet).
 
 **App:** Skolinsikt, a Swedish school-data demo (Next.js 16 / React 19 / Tailwind v4 / ECharts,
 SQLite baked at build time → static site). Fictional Göteborg grundskola **Framtidsskolan**, åk 1–10,
@@ -24,7 +25,9 @@ SQLite baked at build time → static site). Fictional Göteborg grundskola **Fr
 **Latest views (post-original-backlog, all shipped + live):** `/behorighet` (Behörighetsprognos —
 illustrative logistic model, åk 4–10, Risk 0–3, `queries-behorighet.ts`); Utredningsskuld
 (`getUtredningsskuld` in `queries-summary.ts`, on start + Analys); Utveckling & potential
-(`queries-development.ts` — tappar mark / stretch / positiv, on start + Analys). `next build` = **449 pages**.
+(`queries-development.ts` — tappar mark / stretch / positiv, on start + Analys); **`/prioritera`**
+(cross-lens consolidation, `queries-priority.ts`) and **`/ledning`** (skolledare control view,
+`queries-ledning.ts`) — see changelog "testgroup feedback iteration". `next build` = **451 pages**.
 
 **Conventions:** RSC pages read via the repository layer (`lib/db/queries*.ts`, `all`/`one`, every
 module `import "server-only"`). UI in `components/ui/primitives.tsx` (Card, PageHeader, Section, Stat,
@@ -272,6 +275,97 @@ better decisions that improve student outcomes?* — weighted toward **early ide
     behörighetskraven" for åk 10); **klass** elevlista column (åk 4–10); **årskurs** callout (riskzon
     count + link). tsc + eslint clean, `next build` green (now 449 pages incl. /behorighet), verified
     live on all four surfaces; 0 real console errors (a transient duplicate-import HMR error was fixed).
+- _tightening pass before testgroup push_ ✅ (user: "go through everything, don't flood users"):
+  removed redundancy accumulated over the five iterations — **elev**: 3 frånvaro-sections (veckolinje +
+  månadslinje + månadstabell + terminssection) merged into ONE "Närvaro och frånvaro" with två charts
+  (månad + termin); **analys**: 25-elev tappar-mark list dropped (stats kept, pointer to resultatmatrisen
+  which lists the actionable corners); **ledning**: "Fallande flerårstrend"-card dropped (redundant with
+  /prioritera lens) → 7 action cards; **klass**: Frånvarotrend column dropped (month grid below shows it
+  better); **prioritera**: 4th stat dropped (chip count duplicate) → 3 stats. README Vyer updated
+  (+ledning/prioritera/behörighet + fyra-läsår note). Verified live + build green. **COMMITTED & PUSHED.**
+- _matris som klickbar fyrfältare_ ✅ (user sketch: 4 boxes, dashed crosshair, dot = elev, hover =
+  name only, click → elevsida): `GroupedScatter` rewritten with own ReactECharts instance —
+  `linkPrefix` prop + point `id` → router.push on click (cursor pointer), tooltip = label only,
+  markLine crosshair. X-axis recentered per scale on the midpoint between hög/låg-gränserna
+  (`NIVA_BOUNDS` exported) so 0/0 splits the quadrants despite two scales. Verified live: click on
+  orange dot → /elev/S7A11, hover shows name, build green, 0 console errors.
+- _resultatmatris nivå × trend_ ✅ (user idea: PCA-categorize students into "låga på väg uppåt / låga
+  står stilla / höga håller i / höga börjar tappa"; user shared R prcomp code):
+  - **Decision: explicit axes instead of PCA** — with these features PC1≈nivå, PC2≈trend anyway, and
+    explicit axes are explainable (Trust). Disclosed in the method note ("PCA-inspirerad").
+  - `getResultMatrix()` in `queries-history.ts` (+ `slope` field added to `StudentLongTrend`): nivå =
+    snittresultat VT2026 normalized per scale (betyg /20 åk 7–10, nivåer /3 åk 1–6; hög ≥0,75/0,78,
+    låg <0,625/0,60), trend = SAME flerterminsklassning as the Fallande trend lens (so matrix and lens
+    never disagree). Six categories incl. mitten + okänd (<4 terminer, mest åk 1). `MATRIX_CATEGORIES` meta.
+  - **Analys**: new "Resultatmatris: nivå × trend" section (`components/result-matrix.tsx` +
+    new `GroupedScatter` in charts.tsx with markLine support): 4 category stats (demo: 39 lag-upp /
+    132 lag-still / 7 hog-tappar / 79 hog-håller), colored quadrant scatter (360 plottable), full lists
+    for the two action corners (hog-tappar = easy to miss; lag-upp = "håll i det som funkar"),
+    lag-still cross-links to /prioritera (already covered by lenses). Method note with thresholds.
+  - Verified: tsc + eslint clean, `next build` green, scatter + lists live-checked, 0 console errors.
+    **Still not pushed** (all four iterations pending user go-ahead).
+- _frånvaro över tid_ ✅ (user feedback with Qlik screenshots: "frånvaro month-for-month innevarande
+  läsår AND per termin for last three läsår"):
+  - **Schema + seed**: new `attendance_term_history` table (student, term, days_total, days_absent) —
+    historical frånvaro is TERM AGGREGATES for the 6 history terms (daily rows only for current läsår;
+    same resolution as the school's own multi-year report). New `rng4` stream, per-student absence
+    drift (~15 % growing, ~10 % improving). 1920 rows. Supabase truncate list updated.
+  - **`queries-history.ts`**: shared `TERM_ABSENCE_SQL` (history table UNION current year split at
+    2026-01-07 from attendance_records) → `getClassMonthlyAbsence`, `getClassTermAbsence`,
+    `getStudentTermAbsence`, and `absenceRate` added to `getSchoolTermSeries`.
+  - **Klass page**: "Frånvaro över tid" section — `components/absence-grid.tsx`, a Qlik-style colored
+    per-elev grid with toggle "Per månad · innevarande läsår" / "Per termin · fyra läsår" + legend
+    (<10 grön / 10–15 gul / 15–25 orange / ≥25 röd). **Elev page**: "Frånvaro över tid" line chart per
+    termin. **/ledning**: 3rd chart card "Frånvaro (hela skolan) – lägre är bättre" (charts now lg:grid-cols-3).
+  - **CSS fix**: new `.table-card--scroll` (overflow-x auto at ALL widths) — dense grids (absence grid,
+    trajectory table) were clipped on desktop by `.table-card`'s overflow:hidden.
+  - Verified: seed + tsc + eslint clean, `next build` green, live-checked klass 9A (both grid modes,
+    aug–maj + HT22–VT26), elev chart, ledning 3 charts, scroll works; 0 console errors. **Still not pushed.**
+- _longitudinal trends iteration_ ✅ (user feedback: "trend is just HT→VT — should be over time like
+  our Qlik progression report, but skolledare must not drown in data"):
+  - **Seed: 3 prior läsår of assessment history** (`scripts/seed.ts`, new `rng3` stream — current-year
+    data + curated scenarios stay byte-identical, verified: merit åk10 251,4, utredningsskuld 136).
+    Terms HT2022…VT2025 added to `ALL_TERMS`/`TERM_SEQUENCE`/`gradeAtTerm()` in `lib/constants.ts`
+    (TermKey widened). Backwards-walk from each student's current level with a per-student slope:
+    ~16 % genuinely improving, ~16 % declining, rest stable. Betyg history for grades 7–9-then,
+    omdömen 2–6-then, LSR 1–4-then; **no** attendance/wellbeing/nat-prov history. ⚠️ Gotcha fixed:
+    utredningsskuld CTEs needed `term in ('HT2025','VT2026')` (count(distinct term)=2 broke with 8 terms).
+  - **`lib/db/queries-history.ts`**: `getStudentTrajectory` (ämne × termin grid + per-subject trend,
+    first-2 vs last-2 avg, ≥3 terms), `getLongTermTrends` (per-student class: least-squares slope of
+    per-term MEAN within one scale — betyg preferred, never mixed with nivåer across the åk-7 scale
+    switch — ±0,012/termin + 0,0625 end-diff confirm, ≥4 terms → exactly the **64** seeded decliners,
+    noise-free; first attempt with per-subject head/tail voting gave 104→85, rejected), `getSchoolTermSeries`.
+  - **Elev page**: "Kunskapsutveckling över tid" — `components/trajectory-table.tsx` Qlik-style grid
+    (colored cells, åk + termin headers, trend pill per ämne, nat-prov col) replaced the old two-term
+    tables (TwoTermTable/SkillTable/WrittenTable/GradeTable deleted).
+  - **Skolledare altitude (not drowning)**: /ledning got "Utveckling över tid" (2 line charts over 8
+    terminer: snittmeritvärde + andel godtagbara, with cohort-shift caveat; HT→VT deltas condensed to
+    one compact strip) + 8th action card "Fallande flerårstrend (64)" → /prioritera. **/prioritera got
+    a 5th lens** "Fallande trend" (2 p). Klass elevlista Utveckling column shows "↘ över tid" marker.
+  - Verified: tsc + eslint clean, `next build` green (451 pages), live-checked elev åk10 (8-term grid)
+    / åk5 (nivågrid åk2–5), ledning (charts + 8 cards), prioritera (223/112/89, trend-lens 64), klass 8B
+    markers; 0 console errors. **Still not committed/pushed** (together with the prior iteration).
+- _testgroup feedback iteration_ ✅ (user-relayed feedback: "still missing highlight of students
+  needing more help" + "better overview/control for skolledare"):
+  - **`/prioritera` – Elever att prioritera** (nav for ALL roles, after start): `lib/db/queries-priority.ts`
+    crosses the four existing lenses per student — Tidig upptäckt (Hög/Förhöjd), Behörighetsprognos
+    (Risk 2–3), utredningsskuldens underlag (new per-student `getUtredningsskuldStudents()` in
+    `queries-summary.ts`) and Tappar mark — with stödstatus (åtgärdsprogram/utredning/anpassning/ingen).
+    No new model: it only intersects existing ones. Demo: 192 in ≥1 lens, **98 in ≥2 lenses, 76 of
+    those without formal support process**. Filterable client list (`components/priority-list.tsx`,
+    default = multi-lens view; filters: urval/lins/stödgap/årskursband, aria-pressed) + "Så fungerar
+    prioriteringen" disclosure (LENS_META). Sorting: lens count → severity points (+1 if formal gap).
+  - **`/ledning` – Ledningsöversikt** (skolledare-only nav, right after start): `lib/db/queries-ledning.ts` +
+    `app/ledning/page.tsx`. (1) **Att agera på** — 7 clickable action cards w/ live numbers (hög risk 18,
+    flera-linser-utan-stöd 76, utredningsskuld 108, Risk 3 = 9, insatser m. passerad uppföljning 1,
+    prognosavvikelse +1245 tkr, sjukfrånvaro 5,7 %), each linking to its underlag; green = nothing to act on.
+    (2) **Läget per stadium** — need-vs-resource matrix (elever, närvaro, trygghet, signaler, riskzon
+    behörighet, tappar mark, flaggade/spec.tjänst, status = worst årskurs attention). (3) **Insatsuppföljning** —
+    overdue vs upcoming follow-ups (`getInsatsUppfoljning`, vs DEMO_TODAY). (4) HT→VT term-trend strip.
+  - **Klass elevlista: Utveckling column** (open follow-up #2 done): `DevBadge` in `klass/[classId]/page.tsx`
+    via `getDevelopment()` — "Kan utmanas mer" (stretch), "Tappar mark", "↗ förbättras", "–".
+  - Verified: tsc + eslint clean, `next build` green (**451 pages**, +/ledning +/prioritera), live-tested
+    in preview (filters, role gating — Lärare blocked from /ledning, 0 console errors).
 - _utveckling & potential_ ✅ (user-prompted balance pass — "fulfill potential, not just fix problems"):
   the app was deficit-heavy (3 risk lenses). Added a development lens that follows **every** student's
   trajectory HT→VT, surfacing two easy-to-miss groups the risk models can't see:
