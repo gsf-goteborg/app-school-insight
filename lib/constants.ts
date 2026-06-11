@@ -74,9 +74,9 @@ export interface School {
 export const HOME_SCHOOL = "FRA";
 
 export const SCHOOLS: School[] = [
-  { id: "FRA", name: "Framtidsskolan", classesPerGrade: 2, blurb: "Demons fullt utbyggda skola – ca 400 elever, åk 1–10." },
-  { id: "ALV", name: "Älvkantens skola", classesPerGrade: 1, blurb: "Liten skola – ca 200 elever, en klass per årskurs." },
-  { id: "BJO", name: "Björkhöjdsskolan", classesPerGrade: 4, blurb: "Stor skola – ca 800 elever, fyra klasser per årskurs." },
+  { id: "FRA", name: "Framtidsskolan mellan", classesPerGrade: 2, blurb: "Demons fullt utbyggda skola – ca 400 elever, två klasser per årskurs." },
+  { id: "ALV", name: "Framtidsskolan liten", classesPerGrade: 1, blurb: "Liten skola – ca 200 elever, en klass per årskurs." },
+  { id: "BJO", name: "Framtidsskolan stor", classesPerGrade: 4, blurb: "Stor skola – ca 800 elever, fyra klasser per årskurs." },
 ];
 
 export const GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;

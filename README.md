@@ -30,10 +30,13 @@ grunden – kör den för en hård återställning. I appen finns även knappen
 
 ## Demoorganisation
 
-Fiktiva *Framtidsskolan*: årskurs 1–10, 2 klasser per årskurs, 20 elever per
-klass = 400 elever. Läsåret HT2025 + VT2026, med fast "idag" **2026-05-15** så
-trender och scenarier alltid ser likadana ut. Stadieindelning (egna gränser):
-Lågstadium åk 1–4, Mellanstadium åk 5–7, Högstadium åk 8–10.
+Tre fiktiva skolor inom samma huvudman: *Framtidsskolan mellan* (demons fullt
+utbyggda skola – årskurs 1–10, 2 klasser per årskurs, 20 elever per klass =
+400 elever), *Framtidsskolan liten* (~200 elever) och *Framtidsskolan stor*
+(~800 elever) – de två senare visas på skolnivå i huvudmannavyn
+(rollen **Utbildningschef**). Läsåret HT2025 + VT2026 med fast "idag"
+**2026-05-15** så trender och scenarier alltid ser likadana ut. Stadieindelning
+(egna gränser): Lågstadium åk 1–4, Mellanstadium åk 5–7, Högstadium åk 8–10.
 
 ## Roller
 

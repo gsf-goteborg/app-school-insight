@@ -10,7 +10,7 @@ import { ResetDemo } from "./reset-demo";
 import { DEMO_TODAY } from "@/lib/constants";
 import { dateLong } from "@/lib/format";
 
-const SCHOOL_NAME = "Framtidsskolan";
+const SCHOOL_NAME = "Framtidsskolan mellan";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { role, setRole } = useRole();

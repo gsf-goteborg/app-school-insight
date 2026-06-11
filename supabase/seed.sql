@@ -29,9 +29,9 @@ insert into school_terms (key,label,start_date,end_date) values
 ('VT2026','Vårterminen 2026','2026-01-07','2026-06-12');
 
 insert into schools (school_id,name,blurb) values
-('FRA','Framtidsskolan','Demons fullt utbyggda skola – ca 400 elever, åk 1–10.'),
-('ALV','Älvkantens skola','Liten skola – ca 200 elever, en klass per årskurs.'),
-('BJO','Björkhöjdsskolan','Stor skola – ca 800 elever, fyra klasser per årskurs.');
+('FRA','Framtidsskolan mellan','Demons fullt utbyggda skola – ca 400 elever, två klasser per årskurs.'),
+('ALV','Framtidsskolan liten','Liten skola – ca 200 elever, en klass per årskurs.'),
+('BJO','Framtidsskolan stor','Stor skola – ca 800 elever, fyra klasser per årskurs.');
 
 insert into staff_all (staff_id,first_name,last_name,role,arbetslag,fte,sick_share,employment_type,years_employed) values
 ('T001','name1','','skolledare',NULL,1,0.0646,'tillsvidare',9.6),

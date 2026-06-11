@@ -109,7 +109,7 @@ export default async function SkolkortPage({ params }: { params: Promise<{ schoo
       <Note tone="info">
         Demodata. Skolkortet visar endast aggregat (dataminimering på huvudmannanivå).
         {schoolId === HOME_SCHOOL
-          ? " Framtidsskolan är demons fullt utbyggda skola – byt roll till Skolledare för att utforska skolans egna vyer ned till elevnivå."
+          ? " Framtidsskolan mellan är demons fullt utbyggda skola – byt roll till Skolledare för att utforska skolans egna vyer ned till elevnivå."
           : " Skolans rektor och elevhälsa arbetar med elevnivån i skolans eget Skolinsikt."}
       </Note>
     </RoleGate>

@@ -118,7 +118,7 @@ export default function StartPage() {
       />
 
       <p className="mb-6 hidden text-sm text-[var(--text-muted)] print:block">
-        Framtidsskolan · sammanfattning per {dateLong(DEMO_TODAY)} · fiktiv demodata
+        Framtidsskolan mellan · sammanfattning per {dateLong(DEMO_TODAY)} · fiktiv demodata
       </p>
 
       <Card className="mb-8 p-5">
