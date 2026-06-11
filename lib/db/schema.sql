@@ -2,6 +2,12 @@
 -- Speglar Postgres-migrationerna i supabase/migrations (framtida Supabase-mål).
 -- Fast "idag" för demon: 2026-05-15 (inlinat i vyerna nedan).
 -- Booleska värden lagras som 0/1.
+--
+-- FLERSKOLEMODELL: fysiska tabeller har suffixet _all och en school_id-kolumn
+-- (default 'FRA' = Framtidsskolan). Vyer med tabellernas gamla namn scopar till
+-- Framtidsskolan, så att hela det befintliga frågelagret förblir en-skols-vyer
+-- utan ändringar. Huvudmannanivån (utbildningschef) läser *_all-tabellerna via
+-- lib/db/queries-huvudman.ts och ser endast aggregat – aldrig elevuppgifter.
 
 pragma journal_mode = wal;
 pragma foreign_keys = on;
@@ -18,8 +24,17 @@ create table school_terms (
   end_date   text not null
 );
 
-create table staff (
+-- Skolor inom huvudmannens område. Framtidsskolan (FRA) är demons fullt
+-- utbyggda skola; övriga visas på skolnivå i huvudmannavyn.
+create table schools (
+  school_id text primary key,
+  name      text not null,
+  blurb     text
+);
+
+create table staff_all (
   staff_id        text primary key,
+  school_id       text not null default 'FRA' references schools(school_id),
   first_name      text not null,
   last_name       text not null,
   role            text not null,
@@ -32,25 +47,29 @@ create table staff (
   years_employed  real not null default 0,
   is_demo         integer not null default 1
 );
+create index idx_staff_school on staff_all(school_id);
 
-create table classes (
+create table classes_all (
   class_id            text primary key,
+  school_id           text not null default 'FRA' references schools(school_id),
   grade_level         integer not null,
   suffix              text not null,
   arbetslag           text not null,
-  mentor_staff_id     text references staff(staff_id),
+  mentor_staff_id     text references staff_all(staff_id),
   -- Socioekonomiskt strukturindex (riksgenomsnitt = 100, högre = större behov).
   -- Styr det socioekonomiska tillägget i elevpengen.
   socioeconomic_index real not null default 100,
   is_demo             integer not null default 1
 );
+create index idx_classes_school on classes_all(school_id);
 
-create table students (
+create table students_all (
   student_id       text primary key,
+  school_id        text not null default 'FRA' references schools(school_id),
   first_name       text not null,
   last_name        text not null,
   grade_level      integer not null,
-  class_id         text not null references classes(class_id),
+  class_id         text not null references classes_all(class_id),
   gender           text not null,
   active           integer not null default 1,
   -- Stödinsatser på elevnivå (§5.7). extra_anpassning ⊇ atgardsprogram.
@@ -59,11 +78,13 @@ create table students (
   utredning_pagaende integer not null default 0,
   is_demo          integer not null default 1
 );
+create index idx_students_school on students_all(school_id);
 
-create table staff_assignments (
+create table staff_assignments_all (
   assignment_id  text primary key,
-  staff_id       text not null references staff(staff_id),
-  class_id       text references classes(class_id),
+  school_id      text not null default 'FRA' references schools(school_id),
+  staff_id       text not null references staff_all(staff_id),
+  class_id       text references classes_all(class_id),
   subject        text,
   grade_level    integer,
   hours_per_week real,
@@ -71,34 +92,38 @@ create table staff_assignments (
   is_demo        integer not null default 1
 );
 
-create table attendance_records (
+create table attendance_records_all (
   attendance_id  integer primary key autoincrement,
-  student_id     text not null references students(student_id),
+  school_id      text not null default 'FRA' references schools(school_id),
+  student_id     text not null references students_all(student_id),
   date           text not null,
   status         text not null,
   minutes_absent integer not null default 0,
   is_demo        integer not null default 1
 );
-create index idx_attendance_student_date on attendance_records(student_id, date);
-create index idx_attendance_date on attendance_records(date);
+create index idx_attendance_student_date on attendance_records_all(student_id, date);
+create index idx_attendance_date on attendance_records_all(date);
 
 -- Historisk närvaro per termin (tre tidigare läsår). Dagliga närvarorader
--- finns endast för innevarande läsår; historiken är terminsaggregat – samma
--- upplösning som skolans egen flerårsrapport för frånvaro.
-create table attendance_term_history (
+-- finns endast för innevarande läsår på Framtidsskolan; historiken (och hela
+-- närvaron för övriga skolor) är terminsaggregat – samma upplösning som
+-- skolans egen flerårsrapport för frånvaro.
+create table attendance_term_history_all (
   history_id  integer primary key autoincrement,
-  student_id  text not null references students(student_id),
+  school_id   text not null default 'FRA' references schools(school_id),
+  student_id  text not null references students_all(student_id),
   term        text not null references school_terms(key),
   days_total  integer not null,
   days_absent integer not null,
   is_demo     integer not null default 1
 );
-create index idx_attendance_history_student on attendance_term_history(student_id);
-create index idx_attendance_history_term on attendance_term_history(term);
+create index idx_attendance_history_student on attendance_term_history_all(student_id);
+create index idx_attendance_history_term on attendance_term_history_all(term);
 
-create table literacy_numeracy_assessments (
+create table literacy_numeracy_assessments_all (
   assessment_id     integer primary key autoincrement,
-  student_id        text not null references students(student_id),
+  school_id         text not null default 'FRA' references schools(school_id),
+  student_id        text not null references students_all(student_id),
   term              text not null references school_terms(key),
   area              text not null,
   level             text not null,
@@ -106,55 +131,61 @@ create table literacy_numeracy_assessments (
   comment           text,
   is_demo           integer not null default 1
 );
-create index idx_lna_student on literacy_numeracy_assessments(student_id);
+create index idx_lna_student on literacy_numeracy_assessments_all(student_id);
 
-create table written_assessments (
+create table written_assessments_all (
   assessment_id integer primary key autoincrement,
-  student_id    text not null references students(student_id),
+  school_id     text not null default 'FRA' references schools(school_id),
+  student_id    text not null references students_all(student_id),
   term          text not null references school_terms(key),
   subject       text not null,
   level         text not null,
   comment       text,
   is_demo       integer not null default 1
 );
-create index idx_written_student on written_assessments(student_id);
+create index idx_written_student on written_assessments_all(student_id);
 
-create table subject_grades (
+create table subject_grades_all (
   grade_id   integer primary key autoincrement,
-  student_id text not null references students(student_id),
+  school_id  text not null default 'FRA' references schools(school_id),
+  student_id text not null references students_all(student_id),
   term       text not null references school_terms(key),
   subject    text not null,
   grade      text not null,
   is_final   integer not null default 0,
   is_demo    integer not null default 1
 );
-create index idx_grades_student on subject_grades(student_id);
+create index idx_grades_student on subject_grades_all(student_id);
+create index idx_grades_school_term on subject_grades_all(school_id, term);
 
-create table national_tests (
+create table national_tests_all (
   test_id    integer primary key autoincrement,
-  student_id text not null references students(student_id),
+  school_id  text not null default 'FRA' references schools(school_id),
+  student_id text not null references students_all(student_id),
   term       text not null references school_terms(key),
   subject    text not null,
   grade      text not null,
   is_demo    integer not null default 1
 );
-create index idx_nat_student on national_tests(student_id);
+create index idx_nat_student on national_tests_all(student_id);
 
 -- Trivselenkät / wellbeing per elev och termin (§ vision: wellbeing-data).
 -- Skala 1–4 där 4 = bäst. Tre dimensioner: trivsel, trygghet, arbetsro (studiero).
-create table wellbeing_surveys (
+create table wellbeing_surveys_all (
   survey_id  integer primary key autoincrement,
-  student_id text not null references students(student_id),
+  school_id  text not null default 'FRA' references schools(school_id),
+  student_id text not null references students_all(student_id),
   term       text not null references school_terms(key),
   trivsel    integer not null,
   trygghet   integer not null,
   studiero   integer not null,
   is_demo    integer not null default 1
 );
-create index idx_wellbeing_student on wellbeing_surveys(student_id);
+create index idx_wellbeing_student on wellbeing_surveys_all(student_id);
 
-create table interventions (
+create table interventions_all (
   intervention_id   integer primary key autoincrement,
+  school_id         text not null default 'FRA' references schools(school_id),
   title             text not null,
   level             text not null,
   target_grade      integer,
@@ -175,7 +206,7 @@ create table interventions (
 
 create table intervention_followups (
   followup_id     integer primary key autoincrement,
-  intervention_id integer not null references interventions(intervention_id) on delete cascade,
+  intervention_id integer not null references interventions_all(intervention_id) on delete cascade,
   date            text not null,
   note            text not null,
   effect_observed text,
@@ -194,25 +225,27 @@ create table comments (
 );
 create index idx_comments_scope on comments(scope, scope_ref);
 
-create table budget_items (
-  item_id  integer primary key autoincrement,
-  category text not null,
-  month    text not null,
-  budget   real not null,
-  actual   real,
-  is_demo  integer not null default 1
+create table budget_items_all (
+  item_id   integer primary key autoincrement,
+  school_id text not null default 'FRA' references schools(school_id),
+  category  text not null,
+  month     text not null,
+  budget    real not null,
+  actual    real,
+  is_demo   integer not null default 1
 );
 
-create table financial_forecasts (
+create table financial_forecasts_all (
   forecast_id        integer primary key autoincrement,
+  school_id          text not null default 'FRA' references schools(school_id),
   category           text not null,
   full_year_budget   real not null,
   full_year_forecast real not null,
   is_demo            integer not null default 1
 );
 
--- Parametrar för elevpeng (kommunens resurstilldelning till skolan, §5.6/§6.7).
--- Nyckel/värde: grundbelopp per elev och stadium + socioekonomiskt strukturbelopp.
+-- Parametrar för elevpeng (kommunens resurstilldelning, §5.6/§6.7) – samma för
+-- alla skolor inom huvudmannen, därför ingen skoldimension.
 create table funding_parameters (
   key   text primary key,
   value real not null,
@@ -220,15 +253,39 @@ create table funding_parameters (
 );
 
 -- Skolövergripande HR-nyckeltal per månad (demodata) för trendvisning.
-create table hr_monthly (
-  month           text primary key,
+create table hr_monthly_all (
+  school_id       text not null default 'FRA' references schools(school_id),
+  month           text not null,
   sick_short_rate real not null, -- korttidssjukfrånvaro (≤14 dagar)
-  sick_long_rate  real not null  -- långtidssjukfrånvaro (>14 dagar)
+  sick_long_rate  real not null, -- långtidssjukfrånvaro (>14 dagar)
+  primary key (school_id, month)
 );
 
 -- ---------------------------------------------------------------------------
--- Aggregerande vyer. "Idag" = 2026-05-15. Sen ankomst (late) räknas som
--- närvaro men särredovisas; frånvaro = giltig + ogiltig.
+-- Skol-scopade vyer (Framtidsskolan). Hela det befintliga frågelagret läser
+-- dessa namn och förblir därmed en-skols-vyer. select * inkluderar school_id,
+-- vilket är ofarligt för typade läsningar.
+-- ---------------------------------------------------------------------------
+create view staff as select * from staff_all where school_id = 'FRA';
+create view classes as select * from classes_all where school_id = 'FRA';
+create view students as select * from students_all where school_id = 'FRA';
+create view staff_assignments as select * from staff_assignments_all where school_id = 'FRA';
+create view attendance_records as select * from attendance_records_all where school_id = 'FRA';
+create view attendance_term_history as select * from attendance_term_history_all where school_id = 'FRA';
+create view literacy_numeracy_assessments as select * from literacy_numeracy_assessments_all where school_id = 'FRA';
+create view written_assessments as select * from written_assessments_all where school_id = 'FRA';
+create view subject_grades as select * from subject_grades_all where school_id = 'FRA';
+create view national_tests as select * from national_tests_all where school_id = 'FRA';
+create view wellbeing_surveys as select * from wellbeing_surveys_all where school_id = 'FRA';
+create view interventions as select * from interventions_all where school_id = 'FRA';
+create view budget_items as select * from budget_items_all where school_id = 'FRA';
+create view financial_forecasts as select * from financial_forecasts_all where school_id = 'FRA';
+create view hr_monthly as select * from hr_monthly_all where school_id = 'FRA';
+
+-- ---------------------------------------------------------------------------
+-- Aggregerande vyer (Framtidsskolan, via de scopade vyerna ovan).
+-- "Idag" = 2026-05-15. Sen ankomst (late) räknas som närvaro men särredovisas;
+-- frånvaro = giltig + ogiltig.
 -- ---------------------------------------------------------------------------
 create view v_student_attendance as
 select

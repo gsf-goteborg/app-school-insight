@@ -56,6 +56,10 @@ export function PriorityList({ rows }: { rows: PriorityStudent[] }) {
   const [gapOnly, setGapOnly] = useState(false);
   const [lens, setLens] = useState<LensKey | null>(null);
   const [band, setBand] = useState<string | null>(null);
+  // Visa topp 25 som standard – listan är rangordnad, så de viktigaste syns
+  // alltid. Skalar till stora skolor utan att bli oöverskådlig.
+  const [showAll, setShowAll] = useState(false);
+  const CAP = 25;
 
   const bandTest = BANDS.find((b) => b.key === band)?.test;
   const shown = rows.filter(
@@ -103,14 +107,16 @@ export function PriorityList({ rows }: { rows: PriorityStudent[] }) {
       </div>
 
       <p className="mb-3 text-sm text-[var(--text-muted)]">
-        Visar {num(shown.length)} elever, sorterade på antal linser och samlad prioritet.
+        {shown.length > CAP && !showAll
+          ? `Visar de ${num(CAP)} högst prioriterade av ${num(shown.length)} elever i urvalet.`
+          : `Visar ${num(shown.length)} elever, sorterade på antal linser och samlad prioritet.`}
       </p>
 
       {shown.length === 0 ? (
         <Card className="p-5 text-[var(--text-muted)]">Inga elever matchar filtret.</Card>
       ) : (
         <div className="space-y-3">
-          {shown.map((r) => (
+          {(showAll ? shown : shown.slice(0, CAP)).map((r) => (
             <Card key={r.student_id} className="p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -145,6 +151,15 @@ export function PriorityList({ rows }: { rows: PriorityStudent[] }) {
               </div>
             </Card>
           ))}
+          {shown.length > CAP && (
+            <button
+              type="button"
+              onClick={() => setShowAll((v) => !v)}
+              className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-muted)] px-3 py-2.5 text-sm font-semibold text-[var(--gbg-blue)] hover:bg-[var(--border-subtle)]"
+            >
+              {showAll ? `Visa endast topp ${num(CAP)}` : `Visa alla ${num(shown.length)} elever i urvalet`}
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -13,6 +13,8 @@ import {
   STUDENTS_PER_CLASS,
   TERMS,
   ALL_TERMS,
+  SCHOOLS,
+  HOME_SCHOOL,
   GRADED_SUBJECTS,
   WRITTEN_SUBJECTS,
   NATIONAL_TEST_SUBJECTS,
@@ -592,35 +594,232 @@ for (const s of students) {
   }
 }
 
+// ----------------------------- Övriga skolor (huvudmannens område) -----------------------------
+// Framtidsskolan (ovan) är demons fullt utbyggda skola och dess data får ALDRIG
+// rubbas (testgruppen känner siffrorna). Här genereras två ytterligare skolor
+// för huvudmannavyn – fullt seedade i *_all-tabellerna men endast synliga på
+// skolnivå i appen. Egen RNG-ström per skola; blocket ligger sist så att
+// Framtidsskolans strömmar (rng–rng4) konsumeras exakt som tidigare.
+//
+// Skolprofiler (ger utbildningschefen något att agera på):
+//   ALV (liten): starka resultat, god trygghet – men liten-skola-ekonomi i obalans.
+//   BJO (stor):  pressad – högre frånvaro, lägre trygghet, vikariekostnader skenar.
+const SCHOOL_PROFILES: Record<string, {
+  ability: number; absence: number; trygg: number;
+  vikarieFactor: number; persFactor: number; sick: number; rngSeed: number;
+}> = {
+  ALV: { ability: 0.04, absence: -0.005, trygg: 0.15, vikarieFactor: 1.0, persFactor: 1.045, sick: -0.005, rngSeed: 11111111 },
+  BJO: { ability: -0.03, absence: 0.015, trygg: -0.25, vikarieFactor: 1.34, persFactor: 1.015, sick: 0.012, rngSeed: 22222222 },
+};
+
+// Radmängder med explicit school_id-kolumn (Framtidsskolans rader använder
+// kolumndefaulten 'FRA' och behöver inte ändras).
+const xStaffRows: Val[][] = [];
+const xClassRows: Val[][] = [];
+const xStudentRows: Val[][] = [];
+const xAttnTermRows: Val[][] = [];
+const xLnaRows: Val[][] = [];
+const xWrittenRows: Val[][] = [];
+const xGradeRows: Val[][] = [];
+const xWellbeingRows: Val[][] = [];
+const xBudgetRows: Val[][] = [];
+const xForecastRows: Val[][] = [];
+const xHrRows: Val[][] = [];
+
+for (const school of SCHOOLS.filter((s) => s.id !== HOME_SCHOOL)) {
+  const sid = school.id;
+  const prof = SCHOOL_PROFILES[sid];
+  const rngS = mulberry32(prof.rngSeed);
+  const rndS = () => rngS();
+  const gaussS = (mean: number, sd: number) => {
+    const u = 1 - rndS();
+    const v = rndS();
+    return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  };
+  const suffixes = ["A", "B", "C", "D"].slice(0, school.classesPerGrade);
+
+  // Personal: skolledare + special per stadium + mentorer. (Ämneslärar-
+  // tjänstefördelning seedas endast för Framtidsskolan.)
+  let staffSeqS = 0;
+  const newStaffS = (role: string, arbetslag: string | null, fte: number): string => {
+    const id = `${sid}-T${String(++staffSeqS).padStart(3, "0")}`;
+    const visstid = rndS() < 0.15;
+    let sick = clamp(gaussS(0.045 + prof.sick, 0.025), 0.005, 0.5);
+    if (rndS() < 0.06 + prof.sick) sick = clamp(gaussS(0.22, 0.07), 0.12, 0.6);
+    xStaffRows.push([
+      id, sid, nextName(), "", role, arbetslag, fte, +sick.toFixed(4),
+      visstid ? "visstid" : "tillsvidare",
+      +clamp(gaussS(visstid ? 1.5 : 9, visstid ? 1 : 6), 0.2, 35).toFixed(1),
+    ]);
+    return id;
+  };
+  newStaffS("skolledare", null, 1.0);
+  for (const al of ["Lågstadium", "Mellanstadium", "Högstadium"]) {
+    newStaffS("speciallarare", al, school.classesPerGrade >= 4 ? 1.5 : 0.75);
+    newStaffS("specialpedagog", al, 0.5);
+  }
+
+  interface XStudent { id: string; grade: number; ability: number; absenceBase: number }
+  const xStudents: XStudent[] = [];
+
+  for (const g of GRADES) {
+    for (const suf of suffixes) {
+      const classId = `${sid}-${g}${suf}`;
+      const al = stadiumFor(g);
+      const mentor = newStaffS("larare", al, 1.0);
+      const socio = +clamp(gaussS(sid === "BJO" ? 108 : 98, 11), 78, 134).toFixed(1);
+      xClassRows.push([classId, sid, g, suf, al, mentor, socio]);
+
+      for (let i = 0; i < STUDENTS_PER_CLASS; i++) {
+        const id = `${sid}-S${g}${suf}${String(i + 1).padStart(2, "0")}`;
+        const ability = clamp(gaussS(0.6 + prof.ability, 0.17), 0.05, 0.98);
+        const absenceBase = clamp(0.045 + prof.absence + (0.6 - ability) * 0.06 + gaussS(0, 0.02), 0.01, 0.25);
+        const anp = rndS() < clamp(0.55 - ability * 0.55, 0.03, 0.5);
+        const prog = anp && rndS() < clamp(0.6 - ability * 0.45, 0.05, 0.6);
+        const utr = !prog && rndS() < clamp(0.10 - ability * 0.09, 0.01, 0.12);
+        xStudents.push({ id, grade: g, ability, absenceBase });
+        xStudentRows.push([id, sid, nextName(), "", g, classId, rndS() < 0.5 ? "flicka" : "pojke", true, anp, prog, utr]);
+      }
+    }
+  }
+
+  // Bedömningar (innevarande läsår + tre läsårs historik) och närvaro per
+  // termin (alla åtta terminer – inga dagliga rader för övriga skolor).
+  for (const s of xStudents) {
+    const r = rndS();
+    const slope = r < 0.16 ? 0.022 : r < 0.32 ? -0.022 : gaussS(0, 0.006);
+    const rAbs = rndS();
+    const absDrift = rAbs < 0.15 ? 0.012 : rAbs < 0.25 ? -0.008 : gaussS(0, 0.002);
+
+    // back = terminer bakåt från innevarande läsår (0 = HT2025/VT2026), samma
+    // skala som Framtidsskolans historikblock. days = skoldagar per termin
+    // (VT2026 t.o.m. demo-idag 15 maj).
+    const allTerms: { key: string; back: number; days: number }[] = [
+      { key: "HT2022", back: 6, days: 88 }, { key: "VT2023", back: 5, days: 98 },
+      { key: "HT2023", back: 4, days: 88 }, { key: "VT2024", back: 3, days: 98 },
+      { key: "HT2024", back: 2, days: 88 }, { key: "VT2025", back: 1, days: 98 },
+      { key: "HT2025", back: 0, days: 88 }, { key: "VT2026", back: 0, days: 83 },
+    ];
+
+    for (const t of allTerms) {
+      const yearsBack = Math.ceil(t.back / 2);
+      const gradeThen = s.grade - yearsBack;
+      if (gradeThen < 1) continue;
+
+      // Närvaro (terminsaggregat)
+      const rate = clamp(s.absenceBase - absDrift * t.back + gaussS(0, 0.012), 0, 0.6);
+      xAttnTermRows.push([s.id, sid, t.key, t.days, Math.round(rate * t.days)]);
+
+      // Kunskapsresultat
+      if (gradeThen >= 7) {
+        for (const subj of GRADED_SUBJECTS) {
+          const subjBias =
+            subj === "Matematik" ? -0.06 :
+            subj === "Moderna språk" ? -0.04 :
+            subj === "Fysik" || subj === "Kemi" ? -0.03 : 0;
+          const score = clamp(s.ability + subjBias - (slope + gaussS(0, 0.006)) * t.back + gaussS(0, 0.06), 0, 1);
+          xGradeRows.push([s.id, sid, t.key, subj, markFromScore(score), gradeThen === 10 && t.key === "VT2026"]);
+        }
+      } else if (gradeThen >= 2) {
+        for (const subj of WRITTEN_SUBJECTS) {
+          if (subj === "Engelska" && gradeThen < 3) continue;
+          const subjBias = subj === "Matematik" ? -0.05 : 0;
+          const base = clamp(s.ability + subjBias - (slope + gaussS(0, 0.006)) * t.back + gaussS(0, 0.08), 0.02, 0.99);
+          const level = levelFromScore(base * 100);
+          xWrittenRows.push([s.id, sid, t.key, subj, level, WRITTEN_COMMENTS[level][Math.floor(rndS() * WRITTEN_COMMENTS[level].length)]]);
+        }
+      }
+      if (gradeThen <= 4) {
+        for (const area of ["reading", "writing", "numeracy"] as const) {
+          const score = clamp(s.ability * 100 - (slope + gaussS(0, 0.006)) * 100 * t.back + gaussS(0, 8), 5, 99);
+          const level = levelFromScore(score);
+          xLnaRows.push([s.id, sid, t.key, area, level, Math.round(score), LNA_COMMENTS[level][Math.floor(rndS() * LNA_COMMENTS[level].length)]]);
+        }
+      }
+    }
+
+    // Trivselenkät (innevarande läsår)
+    const latent = 3.35 + prof.trygg - s.absenceBase * 4 + (s.ability - 0.6) * 0.5;
+    for (const t of TERMS) {
+      const dim = (bias: number) => clamp(Math.round(latent + bias + gaussS(0, 0.5)), 1, 4);
+      xWellbeingRows.push([s.id, sid, t.key, dim(0.1), dim(0.2), dim((s.ability - 0.6) * 0.4)]);
+    }
+  }
+
+  // Ekonomi (skalad efter elevantal) och HR per månad
+  const sizeFactor = xStudents.length / 400;
+  for (const c of CATS) {
+    let fullBudget = 0;
+    for (let m = 0; m < MONTHS.length; m++) {
+      const budget = Math.round(c.monthly * sizeFactor * (1 + c.drift * m));
+      fullBudget += budget;
+      let actual: number | null = null;
+      if (m <= TODAY_MONTH_IDX) {
+        const factor = c.vikarie ? prof.vikarieFactor : c.name === "Personalkostnader" ? prof.persFactor : 1.0;
+        actual = Math.round(budget * factor * (1 + gaussS(0, 0.03)));
+      }
+      xBudgetRows.push([sid, c.name, MONTHS[m], budget, actual]);
+    }
+    const forecastFactor = c.vikarie ? prof.vikarieFactor : c.name === "Personalkostnader" ? prof.persFactor : 1 + gaussS(0, 0.01);
+    xForecastRows.push([sid, c.name, fullBudget, Math.round(fullBudget * forecastFactor)]);
+  }
+  for (let m = 0; m < MONTHS.length; m++) {
+    const winter = m >= 4 && m <= 6;
+    xHrRows.push([
+      sid, MONTHS[m],
+      +clamp(0.022 + prof.sick / 2 + (winter ? 0.013 : 0) + gaussS(0, 0.004), 0.01, 0.07).toFixed(4),
+      +clamp(0.018 + prof.sick / 2 + gaussS(0, 0.003), 0.008, 0.05).toFixed(4),
+    ]);
+  }
+}
+
 // ----------------------------- Datamängder -----------------------------
 // En källa, två mål: SQLite-databasen (primär) och supabase/seed.sql (framtida).
 interface Dataset { table: string; cols: string[]; rows: Val[][] }
+// Fysiska tabeller har _all-suffix och en school_id-kolumn med default 'FRA' –
+// Framtidsskolans rader skrivs därför utan school_id (kolumndefaulten gäller),
+// medan övriga skolors rader (x*-mängderna) anger school_id explicit.
 const datasets: Dataset[] = [
   { table: "user_roles", cols: ["key", "label"], rows: [
     ["skolledare", "Skolledare"], ["elevhalsa", "Elevhälsa"],
     ["forstelarare", "Förstelärare"], ["larare", "Lärare"],
+    ["utbildningschef", "Utbildningschef"],
   ] },
   { table: "school_terms", cols: ["key", "label", "start_date", "end_date"],
     rows: ALL_TERMS.map((t) => [t.key, t.label, t.start, t.end]) },
-  { table: "staff", cols: ["staff_id", "first_name", "last_name", "role", "arbetslag", "fte", "sick_share", "employment_type", "years_employed"], rows: staffRows },
-  { table: "classes", cols: ["class_id", "grade_level", "suffix", "arbetslag", "mentor_staff_id", "socioeconomic_index"], rows: classRows },
-  { table: "students", cols: ["student_id", "first_name", "last_name", "grade_level", "class_id", "gender", "active", "extra_anpassning", "atgardsprogram", "utredning_pagaende"], rows: studentRows },
-  { table: "staff_assignments", cols: ["assignment_id", "staff_id", "class_id", "subject", "grade_level", "hours_per_week", "is_qualified"], rows: assignRows },
-  { table: "attendance_records", cols: ["student_id", "date", "status", "minutes_absent"], rows: attendanceRows },
-  { table: "attendance_term_history", cols: ["student_id", "term", "days_total", "days_absent"], rows: attendanceHistoryRows },
-  { table: "literacy_numeracy_assessments", cols: ["student_id", "term", "area", "level", "progression_score", "comment"], rows: lnaRows },
-  { table: "written_assessments", cols: ["student_id", "term", "subject", "level", "comment"], rows: writtenRows },
-  { table: "subject_grades", cols: ["student_id", "term", "subject", "grade", "is_final"], rows: gradeRows },
-  { table: "national_tests", cols: ["student_id", "term", "subject", "grade"], rows: natRows },
-  { table: "wellbeing_surveys", cols: ["student_id", "term", "trivsel", "trygghet", "studiero"], rows: wellbeingRows },
-  { table: "interventions",
+  { table: "schools", cols: ["school_id", "name", "blurb"],
+    rows: SCHOOLS.map((s) => [s.id, s.name, s.blurb]) },
+  { table: "staff_all", cols: ["staff_id", "first_name", "last_name", "role", "arbetslag", "fte", "sick_share", "employment_type", "years_employed"], rows: staffRows },
+  { table: "classes_all", cols: ["class_id", "grade_level", "suffix", "arbetslag", "mentor_staff_id", "socioeconomic_index"], rows: classRows },
+  { table: "students_all", cols: ["student_id", "first_name", "last_name", "grade_level", "class_id", "gender", "active", "extra_anpassning", "atgardsprogram", "utredning_pagaende"], rows: studentRows },
+  { table: "staff_assignments_all", cols: ["assignment_id", "staff_id", "class_id", "subject", "grade_level", "hours_per_week", "is_qualified"], rows: assignRows },
+  { table: "attendance_records_all", cols: ["student_id", "date", "status", "minutes_absent"], rows: attendanceRows },
+  { table: "attendance_term_history_all", cols: ["student_id", "term", "days_total", "days_absent"], rows: attendanceHistoryRows },
+  { table: "literacy_numeracy_assessments_all", cols: ["student_id", "term", "area", "level", "progression_score", "comment"], rows: lnaRows },
+  { table: "written_assessments_all", cols: ["student_id", "term", "subject", "level", "comment"], rows: writtenRows },
+  { table: "subject_grades_all", cols: ["student_id", "term", "subject", "grade", "is_final"], rows: gradeRows },
+  { table: "national_tests_all", cols: ["student_id", "term", "subject", "grade"], rows: natRows },
+  { table: "wellbeing_surveys_all", cols: ["student_id", "term", "trivsel", "trygghet", "studiero"], rows: wellbeingRows },
+  { table: "interventions_all",
     cols: ["title","level","target_grade","target_class_id","target_student_id","subject","start_date","follow_up_date","owner_role","hypothesis","planned_action","expected_effect","outcome","status","is_demo"],
     rows: interventions },
   { table: "intervention_followups", cols: ["intervention_id", "date", "note", "effect_observed", "is_demo"], rows: followups },
-  { table: "budget_items", cols: ["category", "month", "budget", "actual"], rows: budgetRows },
-  { table: "financial_forecasts", cols: ["category", "full_year_budget", "full_year_forecast"], rows: forecastRows },
+  { table: "budget_items_all", cols: ["category", "month", "budget", "actual"], rows: budgetRows },
+  { table: "financial_forecasts_all", cols: ["category", "full_year_budget", "full_year_forecast"], rows: forecastRows },
   { table: "funding_parameters", cols: ["key", "value", "label"], rows: fundingRows },
-  { table: "hr_monthly", cols: ["month", "sick_short_rate", "sick_long_rate"], rows: hrRows },
+  { table: "hr_monthly_all", cols: ["month", "sick_short_rate", "sick_long_rate"], rows: hrRows },
+  // Övriga skolor (explicit school_id)
+  { table: "staff_all", cols: ["staff_id", "school_id", "first_name", "last_name", "role", "arbetslag", "fte", "sick_share", "employment_type", "years_employed"], rows: xStaffRows },
+  { table: "classes_all", cols: ["class_id", "school_id", "grade_level", "suffix", "arbetslag", "mentor_staff_id", "socioeconomic_index"], rows: xClassRows },
+  { table: "students_all", cols: ["student_id", "school_id", "first_name", "last_name", "grade_level", "class_id", "gender", "active", "extra_anpassning", "atgardsprogram", "utredning_pagaende"], rows: xStudentRows },
+  { table: "attendance_term_history_all", cols: ["student_id", "school_id", "term", "days_total", "days_absent"], rows: xAttnTermRows },
+  { table: "literacy_numeracy_assessments_all", cols: ["student_id", "school_id", "term", "area", "level", "progression_score", "comment"], rows: xLnaRows },
+  { table: "written_assessments_all", cols: ["student_id", "school_id", "term", "subject", "level", "comment"], rows: xWrittenRows },
+  { table: "subject_grades_all", cols: ["student_id", "school_id", "term", "subject", "grade", "is_final"], rows: xGradeRows },
+  { table: "wellbeing_surveys_all", cols: ["student_id", "school_id", "term", "trivsel", "trygghet", "studiero"], rows: xWellbeingRows },
+  { table: "budget_items_all", cols: ["school_id", "category", "month", "budget", "actual"], rows: xBudgetRows },
+  { table: "financial_forecasts_all", cols: ["school_id", "category", "full_year_budget", "full_year_forecast"], rows: xForecastRows },
+  { table: "hr_monthly_all", cols: ["school_id", "month", "sick_short_rate", "sick_long_rate"], rows: xHrRows },
 ];
 
 // ----------------------------- Bygg SQLite-databasen -----------------------------
@@ -655,10 +854,10 @@ parts.push("-- GENERERAD AV scripts/seed.ts – ändra inte för hand. All data 
 parts.push("begin;");
 parts.push("-- Rensa befintlig demodata (idempotent omseedning).");
 parts.push(`truncate table
-  intervention_followups, interventions, comments,
-  attendance_records, attendance_term_history, literacy_numeracy_assessments, written_assessments,
-  subject_grades, national_tests, wellbeing_surveys, staff_assignments, students, classes, staff,
-  budget_items, financial_forecasts, funding_parameters, hr_monthly, school_terms, user_roles
+  intervention_followups, interventions_all, comments,
+  attendance_records_all, attendance_term_history_all, literacy_numeracy_assessments_all, written_assessments_all,
+  subject_grades_all, national_tests_all, wellbeing_surveys_all, staff_assignments_all, students_all, classes_all, staff_all,
+  budget_items_all, financial_forecasts_all, funding_parameters, hr_monthly_all, schools, school_terms, user_roles
   restart identity cascade;`);
 for (const ds of datasets) parts.push(insertBatch(ds.table, ds.cols, ds.rows));
 parts.push("commit;");
@@ -678,3 +877,4 @@ console.log(`  omdömen: ${writtenRows.length}`);
 console.log(`  betyg: ${gradeRows.length}, nationella prov: ${natRows.length}`);
 console.log(`  historik (3 läsår): betyg ${histGradeRows}, omdömen ${histWrittenRows}, LSR ${histLnaRows}, närvaroterminer ${attendanceHistoryRows.length}`);
 console.log(`  insatser: ${interventions.length}, budgetrader: ${budgetRows.length}`);
+console.log(`  övriga skolor: ${xStudentRows.length} elever, ${xClassRows.length} klasser, ${xGradeRows.length} betyg, ${xAttnTermRows.length} närvaroterminer`);

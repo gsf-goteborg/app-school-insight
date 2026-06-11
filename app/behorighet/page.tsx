@@ -1,5 +1,5 @@
 import { RoleGate } from "@/components/role-gate";
-import { PageHeader, Card, Section, Stat, Pill, Note } from "@/components/ui/primitives";
+import { PageHeader, Card, Section, Stat, Pill, Note, Disclosure } from "@/components/ui/primitives";
 import { BarChart } from "@/components/charts";
 import { BehorighetList } from "@/components/behorighet-list";
 import {
@@ -107,7 +107,7 @@ export default function BehorighetPage() {
         <BehorighetList rows={all} />
       </Section>
 
-      <Section
+      <Disclosure
         title="Så beräknas sannolikheten"
         description="Modellen är illustrativ på demodata (ingen historik att träna på), men efterliknar metoden i en skarp lösning och visar varje elevs underliggande faktorer."
       >
@@ -140,7 +140,7 @@ export default function BehorighetPage() {
             </div>
           </Card>
         </div>
-      </Section>
+      </Disclosure>
 
       <Note tone="info">
         Demodata. Sannolikheten är en illustrativ skattning – inte en garanti eller ett omdöme om eleven – och ska tolkas

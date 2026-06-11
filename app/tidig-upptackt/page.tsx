@@ -1,5 +1,5 @@
 import { RoleGate } from "@/components/role-gate";
-import { PageHeader, Card, Section, Stat, Pill, Note } from "@/components/ui/primitives";
+import { PageHeader, Card, Section, Stat, Pill, Note, Disclosure } from "@/components/ui/primitives";
 import { BarChart } from "@/components/charts";
 import { EarlyWarningList } from "@/components/early-warning-list";
 import {
@@ -56,7 +56,7 @@ export default function TidigUpptacktPage() {
         <EarlyWarningList rows={rows} bevaka={summary.bevaka} />
       </Section>
 
-      <Section
+      <Disclosure
         title="Så beräknas signalerna"
         description="Modellen är medvetet enkel och granskningsbar. Varje elevs underliggande siffror visas som etiketter på raden, och namnet länkar till elevens fullständiga underlag."
       >
@@ -90,7 +90,7 @@ export default function TidigUpptacktPage() {
             </p>
           </Card>
         </div>
-      </Section>
+      </Disclosure>
 
       <Note tone="info">
         Demodata. Signalerna är indikatorer som ska tolkas med professionell bedömning och tillsammans med annan

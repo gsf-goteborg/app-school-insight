@@ -156,6 +156,97 @@ export function getStadiumStatus(): StadiumStatus[] {
   });
 }
 
+// --- Veckans fokus: tre prioriterade åtgärder med vad/varför/nästa steg ---
+// Svar på skolledarcitatet från testgruppen: "Jag vill inte ha mer data – jag
+// vill veta vad jag ska göra och varför det ser ut som det gör."
+
+export interface FokusItem {
+  title: string;     // VAD
+  varfor: string;    // VARFÖR det ser ut så
+  nastaSteg: string; // GÖR SÅ HÄR
+  href: string;
+  tone: ActionTone;
+}
+
+export function getVeckansFokus(): FokusItem[] {
+  const warning = getEarlyWarningSummary();
+  const priority = getPrioritySummary(getPriorityStudents());
+  const { overdue } = getInsatsUppfoljning();
+  const economy = getEconomyTotals();
+  const deviationShare = economy.full_year_budget
+    ? (economy.full_year_forecast - economy.full_year_budget) / economy.full_year_budget
+    : 0;
+  const stadia = getStadiumStatus();
+  const worst = stadia
+    .filter((s) => s.attention === "Prioritera")
+    .sort((a, b) => a.avgTrygghet - b.avgTrygghet)[0];
+
+  const candidates: { score: number; item: FokusItem }[] = [];
+
+  if (warning.hog > 0) {
+    candidates.push({
+      score: 5,
+      item: {
+        title: `Säkra att de ${warning.hog} eleverna med hög risk hanteras`,
+        varfor: "De samlar flest tidiga signaler just nu – frånvaro, kunskapsresultat och trivsel pekar åt fel håll samtidigt.",
+        nastaSteg: "Gå igenom listan med elevhälsoteamet och bekräfta att varje elev har en ansvarig och en pågående åtgärd.",
+        href: "/tidig-upptackt",
+        tone: "kritisk",
+      },
+    });
+  }
+  if (priority.multiNoFormal > 0) {
+    candidates.push({
+      score: 4.5,
+      item: {
+        title: `Stäng stödgapet för ${priority.multiNoFormal} elever`,
+        varfor: "De fångas av minst två oberoende linser men saknar både åtgärdsprogram och utredning – störst risk att falla mellan stolarna.",
+        nastaSteg: "Be elevhälsan prioritera en första kartläggning, börja med dem som fångas av flest linser.",
+        href: "/prioritera",
+        tone: "kritisk",
+      },
+    });
+  }
+  if (overdue.length > 0) {
+    candidates.push({
+      score: 4,
+      item: {
+        title: `Återuppta uppföljningen av ${overdue.length} ${overdue.length === 1 ? "insats" : "insatser"}`,
+        varfor: "Uppföljningsdatumet har passerat – utan uppföljning vet vi inte om insatsen ger effekt eller behöver justeras.",
+        nastaSteg: "Boka uppföljning med insatsens ägare och dokumentera utfallet mot den förväntade effekten.",
+        href: "/insatser",
+        tone: "uppmarksam",
+      },
+    });
+  }
+  if (worst) {
+    candidates.push({
+      score: 3.5,
+      item: {
+        title: `Följ upp ${worst.stadium.toLowerCase()}et (${worst.range})`,
+        varfor: `Stadiet sticker ut: trygghet ${worst.avgTrygghet.toFixed(1).replace(".", ",")}/4, ${worst.flagged} elever med tidig signal och ${worst.tapparMark} som tappar mark.`,
+        nastaSteg: "Ta läget med arbetslaget och stäm av att stödresurserna ligger där behoven är störst.",
+        href: "/personal",
+        tone: "uppmarksam",
+      },
+    });
+  }
+  if (deviationShare >= 0.015) {
+    candidates.push({
+      score: 3,
+      item: {
+        title: "Hantera prognosavvikelsen i ekonomin",
+        varfor: `Helårsprognosen ligger ${(deviationShare * 100).toFixed(1).replace(".", ",")} % över budget – vikariekostnaderna driver avvikelsen.`,
+        nastaSteg: "Gå igenom vikarieanvändningen med administrationen och uppdatera prognosen.",
+        href: "/ekonomi",
+        tone: "uppmarksam",
+      },
+    });
+  }
+
+  return candidates.sort((a, b) => b.score - a.score).slice(0, 3).map((c) => c.item);
+}
+
 export interface InsatsUppfoljning {
   /** Pågående/planerade insatser vars uppföljningsdatum passerat demo-idag. */
   overdue: Intervention[];

@@ -16,10 +16,13 @@ const GROUP_COLOR: Record<MatrixCategory, string> = {
   okand: "#b0bcc6",
 };
 
+/** Max antal elever per hörnlista – resten nås via diagrammet/klassvyerna. */
+const CHIP_CAP = 10;
+
 function StudentChips({ students }: { students: MatrixStudent[] }) {
   return (
     <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-      {students.map((s) => (
+      {students.slice(0, CHIP_CAP).map((s) => (
         <li key={s.student_id}>
           <Link
             href={`/elev/${s.student_id}`}
@@ -37,6 +40,11 @@ function StudentChips({ students }: { students: MatrixStudent[] }) {
           </Link>
         </li>
       ))}
+      {students.length > CHIP_CAP && (
+        <li className="flex items-center rounded-lg border border-dashed border-[var(--border-strong)] px-3 py-2 text-sm text-[var(--text-muted)]">
+          + {students.length - CHIP_CAP} elever till – hovra i diagrammet ovan eller öppna respektive klasslista.
+        </li>
+      )}
     </ul>
   );
 }

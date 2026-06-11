@@ -171,6 +171,43 @@ export function Empty({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Hopfällbar fördjupning (details/summary, ingen JS). För modellredovisningar
+ * och metodnoter: transparensen finns kvar ett klick bort utan att tynga vyn.
+ */
+export function Disclosure({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <details className="group mb-8 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-[var(--shadow-card)]">
+      <summary className="cursor-pointer select-none px-5 py-4 [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center justify-between gap-3">
+          <span>
+            <span className="block text-base font-semibold">{title}</span>
+            {description && <span className="mt-0.5 block text-sm text-[var(--text-muted)]">{description}</span>}
+          </span>
+          <span
+            aria-hidden
+            className="shrink-0 text-sm font-semibold text-[var(--gbg-blue)] group-open:hidden"
+          >
+            Visa +
+          </span>
+          <span aria-hidden className="hidden shrink-0 text-sm font-semibold text-[var(--gbg-blue)] group-open:inline">
+            Dölj −
+          </span>
+        </span>
+      </summary>
+      <div className="border-t border-[var(--border-subtle)] px-5 py-4">{children}</div>
+    </details>
+  );
+}
+
 /** Liten förklarande not, t.ex. försiktighetsmarkering (§4/§15). */
 export function Note({ children, tone = "neutral" }: { children: ReactNode; tone?: Tone }) {
   return (

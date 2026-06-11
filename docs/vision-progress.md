@@ -11,11 +11,70 @@
 ~3 min). Pages source = "GitHub Actions". Build basePath is set by the workflow to `/app-school-insight`.
 Status when last left: **green, site verified working** by the user. Ready for the first test group.
 
-**Open (optional) follow-ups — not started:**
-1. A short Swedish "Till testgruppen" intro/feedback note on the start page (what this is + how to
-   give feedback — needs the user to specify the feedback channel).
-2. Multi-year frånvarotrend as a /prioritera lens (data exists in `attendance_term_history`; offered,
-   user hasn't asked yet).
+**Status:** ⚠️ **BUILT LOCALLY, NOT PUSHED** — the multi-school/utbildningschef + actionability
+iteration (below) is committed locally and awaits the user's review before push (user's explicit
+instruction 2026-06-11: "pusha inget till git förrän jag har tittat närmare på det").
+
+**Testgroup feedback (first round, 2026-06-11):** positive overall; wants more överskådlighet, less
+överflödighet. Skolledare quote (now a design principle): *"Jag vill inte ha mer data – jag vill veta
+vad jag ska göra och varför det ser ut som det gör."* → answered by "Veckans fokus" + caps + disclosures.
+
+**SHIPPED IN THE LOCAL ITERATION (multi-school + utbildningschef + actionability):**
+- **Schema rework:** physical tables renamed `*_all` with `school_id` (default 'FRA') + a `schools`
+  table; **views named as the old tables scope to Framtidsskolan** → the entire existing query layer
+  (18 modules) and all pages stayed untouched and FRA-scoped. Huvudman level reads `_all` tables via
+  `queries-huvudman.ts` only. Seed inserts into `_all` names (FRA rows rely on the column default).
+- **Seed: 3 schools** (`SCHOOLS` in constants — FRA 400, ALV "Älvkantens skola" 200 (stark men
+  småskole-ekonomi i obalans), BJO "Björkhöjdsskolan" 800 (pressad: frånvaro 6,0 %, trygghet 3,1,
+  sjukfrånvaro 9,1 %, vikariekostnader)). New-school block runs AFTER all FRA generation with own RNG
+  per school → **FRA byte-identical, verified** (merit 251,4 / utredningsskuld 136 / tidig signal 213).
+  Non-FRA: full assessments + 4-läsår history + term-attendance (no dailies), wellbeing, staff,
+  economy/HR per school. BJO doubles as the planned stor-skola scale test.
+- **Utbildningschef role + huvudmannavy:** role sees ONLY "Mina skolor" (`/huvudman`) + skolkort
+  (`/huvudman/[schoolId]`, SSG for FRA/ALV/BJO). Per school: fokuspunkter (vad+nästa steg i rektors-
+  dialogen, derived from worst indicators), KPI table, frånvaro/merit per termin över fyra läsår,
+  per-årskurs aggregat. Direct indicators only (not the schools' internal models). Dataminimering
+  enforced via role gating — utbildningschef gets "Behörighet saknas" on all student-level views (verified).
+- **Actionability (the quote):** `/ledning` opens with **"Veckans fokus"** — 3 prioriterade åtgärder
+  med VAD/DÄRFÖR/NÄSTA STEG (`getVeckansFokus()` i queries-ledning, severity-scored candidates).
+  **Worklist caps:** /prioritera + /tidig-upptackt show topp 25 (ranked) + "Visa alla N"; matrix
+  corner lists cap at 10. **`Disclosure` primitive** (details/summary, no JS) — model explanations on
+  tidig-upptackt/behorighet/prioritera are now collapsed by default (transparency one click away).
+- Verified: tsc+eslint clean, `next build` green (+/huvudman +3 skolkort), preview-tested (role
+  gating, fokus cards, caps 25/112, collapsed disclosures, FRA start page identical), 0 console errors.
+
+**REMAINING from the planned scale pass:** scope picker (stadium/arbetslag default narrowing) and
+lärare-defaults-to-own-classes — caps shipped; picker deferred until a real >400-elev school is browsable.
+
+**Open (optional) follow-ups:**
+4. "Till testgruppen" intro/feedback note on the start page (needs the user's feedback channel).
+5. Multi-year frånvarotrend as a /prioritera lens (data exists in `attendance_term_history`).
+6. **Närvaroprocess-status per flaggad elev** (demo-store, like insatser): which escalation step is the
+   student on (registrerad → vårdnadshavare kontaktad → kartläggning → elevhälsa → fördjupad utredning/
+   samverkan), who owns the next step. Replaces the REJECTED "frånvarotrappa med procentnivåer" idea —
+   user provided research (2026-06): Skolverket no longer promotes fixed percentage tiers; the modern
+   framing is systematiskt närvaroarbete (främjande/förebyggande/upptäckande/åtgärdande). The app's
+   existing thresholds stay as transparent MODEL signals only — never present them as official language.
+7. **Milstolpevy för matematik (kumulativa grindar)** — flag MISSED critical gates rather than
+   current average level: taluppfattning (åk 1–3), automatiserade tabeller (åk 3–4), bråk/rationella
+   tal (åk 4–6 — strongest research predictor for algebra), pre-algebra (åk 6–7). Same datapoints
+   read smarter, zero new assessments. A student can look "i linje" on average while missing a gate
+   that breaks them two years later. Reading equivalent: avkodningsfönstret åk 1–2 (respond with
+   intensity, don't add measurement).
+8. **Frame LSR features as stöd för läsa-skriva-räkna-garantin** (skollagen 3 kap): the garanti
+   already mandates exactly what the app does — kartläggning, tidig upptäckt, insats direkt,
+   uppföljning, överlämning mellan stadier. Use that language on the LSR surfaces (start card,
+   analys, årskurs 1–4). NOTE: a new guiding principle "No New Reporting Burden" was added to
+   docs/vision.md (2026-06) — appen ber aldrig lärare rapportera något som inte redan ska registreras;
+   tät uppföljning endast inom pågående insats.
+9. **Migration from sibling repo `app-predict-absence`** (surveyed 2026-06-10, ~500 students/8 schools,
+   trained joblib models daily+chronic+lesson, SHAP top-5, Vklass lesson data, Skola24 schedules; FastAPI
+   is thin — all scoring is batch): **Fas B** = Frånvaroprognos view via a Python scoring step in the
+   build (features.py on our attendance → predictions + SHAP into baked SQLite; behörighetsprognos-style
+   UX, SHAP waterfall on elev page; retrain on our data in-build if calibration matters). **Fas C** =
+   port class_schedules + lesson-level attendance into the seed → schema-risk view; merge with the
+   multi-school/utbildningschef iteration (their generator already does 8 schools F–9 — note F–9 vs our
+   åk 1–10 mapping). Their Recharts frontend is NOT ported (our ECharts + primitives stay).
 
 **App:** Skolinsikt, a Swedish school-data demo (Next.js 16 / React 19 / Tailwind v4 / ECharts,
 SQLite baked at build time → static site). Fictional Göteborg grundskola **Framtidsskolan**, åk 1–10,

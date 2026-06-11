@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { RoleGate } from "@/components/role-gate";
-import { PageHeader, Card, Section, Stat, Note } from "@/components/ui/primitives";
+import { PageHeader, Card, Section, Stat, Note, Disclosure } from "@/components/ui/primitives";
 import { PriorityList } from "@/components/priority-list";
 import { getPriorityStudents, getPrioritySummary, LENS_META } from "@/lib/db/queries-priority";
 import { num } from "@/lib/format";
@@ -35,7 +35,7 @@ export default function PrioriteraPage() {
         <PriorityList rows={rows} />
       </Section>
 
-      <Section
+      <Disclosure
         title="Så fungerar prioriteringen"
         description="Listan tillför ingen ny modell – den korsar de befintliga linserna per elev. Varje lins är granskningsbar i sin egen vy."
       >
@@ -56,7 +56,7 @@ export default function PrioriteraPage() {
             av flera är en stark indikation, inte ett bevis.
           </p>
         </Card>
-      </Section>
+      </Disclosure>
 
       <Note tone="info">
         Demodata. Listan är ett underlag för elevhälsans och skolledningens prioritering – inte en automatisk

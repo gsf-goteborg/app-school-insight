@@ -38,6 +38,9 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
 export function EarlyWarningList({ rows, bevaka }: { rows: RiskStudent[]; bevaka: number }) {
   const [cat, setCat] = useState<RiskCategory | null>(null);
   const [band, setBand] = useState<string | null>(null);
+  // Rangordnad lista → topp 25 som standard, resten bakom "visa alla".
+  const [showAll, setShowAll] = useState(false);
+  const CAP = 25;
 
   const bandTest = BANDS.find((b) => b.key === band)?.test;
   const shown = rows.filter(
@@ -66,15 +69,17 @@ export function EarlyWarningList({ rows, bevaka }: { rows: RiskStudent[]; bevaka
       </div>
 
       <p className="mb-3 text-sm text-[var(--text-muted)]">
-        Visar {num(shown.length)} av {num(rows.length)} elever med hög eller förhöjd risk
-        {cat || band ? " i urvalet" : ""}. Ytterligare {num(bevaka)} elever har en svagare signal att bevaka.
+        {shown.length > CAP && !showAll
+          ? `Visar de ${num(CAP)} starkaste signalerna av ${num(shown.length)} elever med hög eller förhöjd risk.`
+          : `Visar ${num(shown.length)} av ${num(rows.length)} elever med hög eller förhöjd risk${cat || band ? " i urvalet" : ""}.`}{" "}
+        Ytterligare {num(bevaka)} elever har en svagare signal att bevaka.
       </p>
 
       {shown.length === 0 ? (
         <Card className="p-5 text-[var(--text-muted)]">Inga elever matchar filtret.</Card>
       ) : (
         <div className="space-y-3">
-          {shown.map((r) => (
+          {(showAll ? shown : shown.slice(0, CAP)).map((r) => (
             <Card key={r.student_id} className="p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -103,6 +108,15 @@ export function EarlyWarningList({ rows, bevaka }: { rows: RiskStudent[]; bevaka
               </p>
             </Card>
           ))}
+          {shown.length > CAP && (
+            <button
+              type="button"
+              onClick={() => setShowAll((v) => !v)}
+              className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-muted)] px-3 py-2.5 text-sm font-semibold text-[var(--gbg-blue)] hover:bg-[var(--border-subtle)]"
+            >
+              {showAll ? `Visa endast topp ${num(CAP)}` : `Visa alla ${num(shown.length)} elever i urvalet`}
+            </button>
+          )}
         </div>
       )}
     </div>

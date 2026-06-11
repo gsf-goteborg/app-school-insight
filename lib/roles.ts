@@ -2,7 +2,7 @@
 // döljer/visar vyer och sektioner. I en skarp lösning skulle samma regler
 // hanteras av databasens radnivåsäkerhet (RLS) – se kommentarer i migrationerna.
 
-export type RoleKey = "skolledare" | "elevhalsa" | "forstelarare" | "larare";
+export type RoleKey = "skolledare" | "elevhalsa" | "forstelarare" | "larare" | "utbildningschef";
 
 export interface Role {
   key: RoleKey;
@@ -32,12 +32,18 @@ export const ROLES: Role[] = [
     label: "Lärare",
     blurb: "Egna klasser, progression och närvaro.",
   },
+  {
+    key: "utbildningschef",
+    label: "Utbildningschef",
+    blurb: "Ser sina skolor på skolnivå – aggregat, aldrig elevuppgifter.",
+  },
 ];
 
 export const DEFAULT_ROLE: RoleKey = "skolledare";
 
 export type ViewKey =
   | "start"
+  | "huvudman"
   | "ledning"
   | "prioritera"
   | "tidig"
@@ -61,7 +67,10 @@ export interface NavItem {
 const ALL: RoleKey[] = ["skolledare", "elevhalsa", "forstelarare", "larare"];
 
 // Behörighetsmatris härledd ur §7.
+// Utbildningschefen ser ENDAST huvudmannanivån (dataminimering: skol-aggregat,
+// aldrig elevuppgifter). Övriga roller ser inte huvudmannavyn.
 export const NAV: NavItem[] = [
+  { view: "huvudman", label: "Mina skolor", href: "/huvudman", roles: ["utbildningschef"] },
   { view: "start", label: "Skolans nuläge", href: "/", roles: ALL },
   { view: "ledning", label: "Ledningsöversikt", href: "/ledning", roles: ["skolledare"] },
   { view: "prioritera", label: "Prioriterade elever", href: "/prioritera", roles: ALL },

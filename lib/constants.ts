@@ -58,6 +58,27 @@ export function gradeAtTerm(currentGrade: number, termKey: string): number | nul
   return g >= 1 ? g : null;
 }
 
+// --- Skolor (huvudmannens område) ---
+// Framtidsskolan (FRA) är demons fullt utbyggda skola – alla befintliga vyer
+// är scopade till den via SQL-vyer (se lib/db/schema.sql). Övriga skolor finns
+// fullt seedade i *_all-tabellerna men visas endast på skolnivå i huvudmannavyn
+// (dataminimering: utbildningschefen ser aggregat, inte elever).
+export interface School {
+  id: string;
+  name: string;
+  /** Klasser per årskurs (suffixen A, B, …). */
+  classesPerGrade: number;
+  blurb: string;
+}
+
+export const HOME_SCHOOL = "FRA";
+
+export const SCHOOLS: School[] = [
+  { id: "FRA", name: "Framtidsskolan", classesPerGrade: 2, blurb: "Demons fullt utbyggda skola – ca 400 elever, åk 1–10." },
+  { id: "ALV", name: "Älvkantens skola", classesPerGrade: 1, blurb: "Liten skola – ca 200 elever, en klass per årskurs." },
+  { id: "BJO", name: "Björkhöjdsskolan", classesPerGrade: 4, blurb: "Stor skola – ca 800 elever, fyra klasser per årskurs." },
+];
+
 export const GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 export type Grade = (typeof GRADES)[number];
 

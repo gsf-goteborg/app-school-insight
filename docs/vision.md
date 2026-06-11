@@ -69,6 +69,17 @@ Complex educational data should be presented in a way that is easy to understand
 
 All insights must be transparent, explainable, and based on clearly visible underlying data.
 
+### No New Reporting Burden
+
+The application must never ask teachers to report anything that is not already required to be
+recorded. Insights are built by reading existing mandatory touchpoints (e.g. kartläggning i
+förskoleklass, nationella bedömningsstöd, nationella prov, ordinarie närvaroregistrering) and by
+following them longitudinally — never by adding assessment occasions.
+
+Tight follow-up is reserved for students with an active intervention, where progress data is part
+of the teaching itself (measuring the intervention's effect), not an additional judgement of the
+child. All other students are followed at the existing mandatory cadence.
+
 ## Demo Environment
 
 This application is a demonstration platform using synthetic school data.

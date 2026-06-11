@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { RoleGate } from "@/components/role-gate";
 import { PageHeader, Card, Section, Pill, Note } from "@/components/ui/primitives";
-import { getActionQueue, getStadiumStatus, getInsatsUppfoljning } from "@/lib/db/queries-ledning";
+import { getActionQueue, getStadiumStatus, getInsatsUppfoljning, getVeckansFokus } from "@/lib/db/queries-ledning";
 import { getSchoolTermTrends } from "@/lib/db/queries-trend";
 import { getSchoolTermSeries } from "@/lib/db/queries-history";
 import { LineChart } from "@/components/charts";
@@ -39,8 +39,43 @@ export default function LedningPage() {
       />
 
       <Section
+        title="Veckans fokus"
+        description="De tre viktigaste sakerna att agera på just nu – vad, varför det ser ut så och förslag på nästa steg."
+      >
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {getVeckansFokus().map((f, i) => (
+            <Link key={f.title} href={f.href} className="block">
+              <Card className="h-full p-5">
+                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  <span
+                    aria-hidden
+                    className={`flex size-5 items-center justify-center rounded-full text-[11px] font-bold text-white ${
+                      f.tone === "kritisk" ? "bg-[var(--gbg-red)]" : "bg-[var(--gbg-orange)]"
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+                  Fokus {i + 1}
+                </p>
+                <p className="mt-2 font-semibold leading-snug">{f.title}</p>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+                  <span className="font-medium text-[var(--text-default)]">Därför: </span>
+                  {f.varfor}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+                  <span className="font-medium text-[var(--text-default)]">Nästa steg: </span>
+                  {f.nastaSteg}
+                </p>
+                <p className="mt-3 text-sm font-semibold text-[var(--gbg-blue)]">Till underlaget →</p>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </Section>
+
+      <Section
         title="Att agera på"
-        description="Åtgärdskö med direktlänkar – grönt betyder att inget kräver agerande just nu."
+        description="Hela åtgärdskön med direktlänkar – grönt betyder att inget kräver agerande just nu."
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {actions.map((a) => (
