@@ -1,8 +1,12 @@
 # Vision-progress
 
 ## ⛔ LOOP STOPPED (user said "stop" 2026-06-12 after 7 iterations + idle-QA) — do not self-schedule.
-## A stray ScheduleWakeup may still fire (~14:18): HALT immediately, do not reschedule, do not build.
+## A stray ScheduleWakeup may still fire: HALT immediately, do not reschedule, do not build.
 ## Only resume if the user explicitly types `/loop …` again.
+
+**✅ ALL 8 COMMITS PUSHED & DEPLOYED 2026-06-12** (7 loop-iterations + review-fix pass) after the
+user's review. Live for the test group. Open: "Till testgruppen"-notis (awaits feedback channel),
+joblib-authorization decision, testgroup round 2.
 
 ## 🔁 HANDOFF — current state (read this first)
 
