@@ -14,7 +14,7 @@ export default function PrioriteraPage() {
       <PageHeader
         kicker="Prioriterade elever"
         title="Elever att prioritera"
-        description="Korsar skolans fem linser – tidiga signaler, behörighetsprognos, ihållande svårigheter, tappar mark och fallande flerårstrend – till en samlad bild. Elever som fångas av flera oberoende linser behöver sannolikt mest, särskilt utan formell stödprocess."
+        description="Korsar skolans sex linser – tidiga signaler, behörighetsprognos, ihållande svårigheter, tappar mark, fallande flerårstrend och växande frånvaro – till en samlad bild. Elever som fångas av flera oberoende linser behöver sannolikt mest, särskilt utan formell stödprocess."
       />
 
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">

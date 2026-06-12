@@ -565,6 +565,50 @@ export function getClassMonthlyAbsence(classId: string): { columns: AbsenceCell[
   return { columns, rows };
 }
 
+/**
+ * Elever vars frånvaro har VUXIT över läsåren: uthållig positiv lutning i
+ * terminsserien (minst fem terminer, regressionslutning ≥ +0,8 p.e./termin)
+ * OCH en redan förhöjd nivå nu (≥ 8 % innevarande termin). Fångar den
+ * långsamt växande frånvaron som engångströsklar missar.
+ */
+export const ABSENCE_DRIFT_SLOPE = 0.008;
+export const ABSENCE_DRIFT_MIN_NOW = 0.08;
+
+export interface GrowingAbsenceStudent {
+  student_id: string;
+  detail: string;
+}
+
+export function getGrowingAbsence(): GrowingAbsenceStudent[] {
+  const rows = all<{ student_id: string; term: string; rate: number }>(
+    `select student_id, term, cast(days_absent as real) / nullif(days_total, 0) rate
+     from (${TERM_ABSENCE_SQL})`,
+  );
+  const byStudent = new Map<string, Map<string, number>>();
+  for (const r of rows) {
+    if (r.rate == null) continue;
+    const m = byStudent.get(r.student_id) ?? new Map();
+    m.set(r.term, r.rate);
+    byStudent.set(r.student_id, m);
+  }
+  const out: GrowingAbsenceStudent[] = [];
+  for (const [sid, byTerm] of byStudent) {
+    const points = TERM_SEQUENCE
+      .map((t, x) => ({ x, y: byTerm.get(t) }))
+      .filter((p): p is { x: number; y: number } => p.y != null);
+    if (points.length < 5) continue;
+    const now = byTerm.get("VT2026");
+    if (now == null || now < ABSENCE_DRIFT_MIN_NOW) continue;
+    const slope = regressionSlope(points);
+    if (slope < ABSENCE_DRIFT_SLOPE) continue;
+    out.push({
+      student_id: sid,
+      detail: `Vuxit ≈ ${(slope * 2 * 100).toFixed(1).replace(".", ",")} p.e./läsår, nu ${Math.round(now * 100)} %`,
+    });
+  }
+  return out;
+}
+
 /** Frånvaro per termin (fyra läsår) för en enskild elev. */
 export function getStudentTermAbsence(studentId: string): AbsenceCell[] {
   const raw = all<{ term: string; rate: number }>(

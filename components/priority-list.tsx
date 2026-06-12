@@ -15,6 +15,7 @@ const LENS_FILTERS: { key: LensKey; label: string }[] = [
   { key: "skuld", label: "Ihållande svårigheter" },
   { key: "tappar", label: "Tappar mark" },
   { key: "trend", label: "Fallande trend" },
+  { key: "franvaro", label: "Växande frånvaro" },
 ];
 
 const SUPPORT_SHORT: Record<PriorityStudent["support"], string> = {

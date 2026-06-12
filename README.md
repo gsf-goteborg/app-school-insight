@@ -81,6 +81,12 @@ docs/spec.md         Specifikation
 
 ## Avgränsningar (denna version)
 
+**Vårdnadshavar- och elevperspektivet ingår medvetet inte.** Demon riktar sig till
+skolans och huvudmannens professioner (skolledare, elevhälsa, lärare, utbildningschef).
+Ett vårdnadshavargränssnitt ställer egna krav på behörighet, språk och dataminimering
+och hanteras som ett separat spår vid en eventuell skarp lösning.
+
+
 Simuleringsläge, demoassistent och skarp autentisering ingår inte ännu – se
 backlogg i `docs/spec.md` §19. Utskrift/PDF finns för startsidans sammanfattning
 (**Skriv ut sammanfattning** → skriv ut/spara som PDF i webbläsaren).

@@ -117,11 +117,14 @@ reorders. *Analysis only — nothing below is built.*
    termin, samma backward-walk-mönster) + trygghet line in befintliga över-tid-sektioner (elev,
    ledning, skolkort). Cheap, completes the longitudinal story.
 
-7. **Smått / medvetna beslut:**
-   - "Till testgruppen"-notis på startsidan (väntar på användarens val av feedbackkanal).
-   - Flerårig frånvarotrend som extra /prioritera-lins (data finns i `attendance_term_history`).
-   - **Vårdnadshavar-/elevperspektivet**: the one vision-adjacent stakeholder entirely absent —
-     out of demo scope is a legitimate choice, but make it consciously (note in README/spec).
+7. **Smått / medvetna beslut:** _mostly done, loop-iter 7 (2026-06-12)_
+   - ⏳ "Till testgruppen"-notis på startsidan — ENDA ÖPPNA PUNKTEN, blocked on the user's choice of
+     feedback channel (e-post? Forms?).
+   - ~~Flerårig frånvarotrend som extra /prioritera-lins~~ ✅ lens 6 "Växande frånvaro" (see changelog).
+   - ~~Vårdnadshavar-/elevperspektivet~~ ✅ conscious scope decision documented in README Avgränsningar.
+
+**GAP-LISTAN ÄR DÄRMED UTTÖMD** (utom testgruppsnotisen, blocked on user input). Loop idles awaiting
+testgroup round 2 / user direction. **SJU lokala commits väntar på granskning + push.**
 
 **App:** Skolinsikt, a Swedish school-data demo (Next.js 16 / React 19 / Tailwind v4 / ECharts,
 SQLite baked at build time → static site). Fictional Göteborg grundskola **Framtidsskolan**, åk 1–10,
@@ -254,6 +257,14 @@ better decisions that improve student outcomes?* — weighted toward **early ide
 
 ## Changelog
 
+- _loop-iter 7_ ✅ (2026-06-12): **gap-list #7 (smått)** — (a) **lens 6 "Växande frånvaro"** i
+  /prioritera: `getGrowingAbsence()` i queries-history (regressionslutning ≥ +0,8 p.e./termin över ≥5
+  terminer ur TERM_ABSENCE_SQL OCH ≥ 8 % nu → 20 elever; multi-lens 112→116, utan-stödprocess 89→92);
+  LENS_META + filter chip + "sex linser" i sidtexten. (b) **Vårdnadshavarbeslutet** dokumenterat i
+  README Avgränsningar (medvetet utanför demo-scope, eget spår vid skarp lösning). (c)
+  Testgruppsnotisen kvarstår — blocked on user's feedback channel. Verified live (chip 20, inga
+  konsolfel), tsc+eslint clean, build green. **Committed locally, NOT pushed.** Gap-listan uttömd →
+  loop idles.
 - _loop-iter 6_ ✅ (2026-06-12): **trygghet över tid** (gap-list #6) — wellbeing was the only measure
   without a longitudinal line. Seed: FRA wellbeing history for 6 terms via NEW stream `rng5`
   (66663333) — current-year survey incl. åk 8-dippen byte-identical (verified: VT2026 3,20, åk 8 2,15,

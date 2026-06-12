@@ -3,7 +3,7 @@ import { all } from "./index";
 import { getEarlyWarnings } from "./queries-risk";
 import { getBehorighetForecasts } from "./queries-behorighet";
 import { getLosingGround } from "./queries-development";
-import { getLongTermTrends } from "./queries-history";
+import { getLongTermTrends, getGrowingAbsence } from "./queries-history";
 import { getUtredningsskuldStudents } from "./queries-summary";
 import { pct } from "@/lib/format";
 
@@ -19,7 +19,7 @@ import { pct } from "@/lib/format";
 // saknar en formell stödprocess. Demodata.
 // ---------------------------------------------------------------------------
 
-export type LensKey = "tidig" | "behorighet" | "skuld" | "tappar" | "trend";
+export type LensKey = "tidig" | "behorighet" | "skuld" | "tappar" | "trend" | "franvaro";
 
 export const LENS_META: { key: LensKey; label: string; href: string; rule: string }[] = [
   {
@@ -51,6 +51,12 @@ export const LENS_META: { key: LensKey; label: string; href: string; rule: strin
     label: "Fallande trend",
     href: "/analys",
     rule: "Resultaten pekar nedåt i flera ämnen sett över upp till fyra läsår (flerterminstrend, inte en enstaka dipp).",
+  },
+  {
+    key: "franvaro",
+    label: "Växande frånvaro",
+    href: "/tidig-upptackt",
+    rule: "Frånvaron har vuxit uthålligt över läsåren (≥ +0,8 p.e. per termin över minst fem terminer) och är redan förhöjd (≥ 8 % nu).",
   },
 ];
 
@@ -182,6 +188,17 @@ export function getPriorityStudents(): PriorityStudent[] {
     });
   }
 
+  // Lins 6: Växande frånvaro över läsåren (terminshistoriken).
+  for (const g of getGrowingAbsence()) {
+    add(g.student_id, {
+      key: "franvaro",
+      label: "Växande frånvaro",
+      detail: g.detail,
+      tone: "uppmarksam",
+      points: 2,
+    });
+  }
+
   const result: PriorityStudent[] = [];
   for (const [studentId, lenses] of lensesByStudent) {
     const s = students.get(studentId);
@@ -220,7 +237,7 @@ export function getPriorityStudents(): PriorityStudent[] {
 
 export function getPrioritySummary(list?: PriorityStudent[]): PrioritySummary {
   const rows = list ?? getPriorityStudents();
-  const perLens = { tidig: 0, behorighet: 0, skuld: 0, tappar: 0, trend: 0 } as Record<LensKey, number>;
+  const perLens = { tidig: 0, behorighet: 0, skuld: 0, tappar: 0, trend: 0, franvaro: 0 } as Record<LensKey, number>;
   for (const r of rows) for (const l of r.lenses) perLens[l.key]++;
   const multi = rows.filter((r) => r.lenses.length >= 2);
   return {
