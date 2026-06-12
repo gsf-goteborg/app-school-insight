@@ -179,6 +179,7 @@ export interface SchoolTermSeries {
   /** En punkt per termin i TERM_SEQUENCE-ordning, null där data saknas. */
   absence: (number | null)[];
   merit: (number | null)[];
+  trygghet: (number | null)[];
 }
 
 export function getSchoolTermSeriesAll(): { labels: string[]; series: SchoolTermSeries[] } {
@@ -194,9 +195,13 @@ export function getSchoolTermSeriesAll(): { labels: string[]; series: SchoolTerm
        group by sg.school_id, sg.term, sg.student_id
      ) group by school_id, term`,
   );
+  const tryggRows = all<{ school_id: string; term: string; v: number }>(
+    `select school_id, term, avg(trygghet) v from wellbeing_surveys_all group by school_id, term`,
+  );
   const key = (sid: string, term: string) => `${sid}|${term}`;
   const absMap = new Map(absenceRows.map((r) => [key(r.school_id, r.term), r.v]));
   const meritMap = new Map(meritRows.map((r) => [key(r.school_id, r.term), r.v]));
+  const tryggMap = new Map(tryggRows.map((r) => [key(r.school_id, r.term), r.v]));
 
   return {
     labels: TERM_SEQUENCE.map(termShort),
@@ -205,6 +210,7 @@ export function getSchoolTermSeriesAll(): { labels: string[]; series: SchoolTerm
       name: s.name,
       absence: TERM_SEQUENCE.map((t) => absMap.get(key(s.id, t)) ?? null),
       merit: TERM_SEQUENCE.map((t) => meritMap.get(key(s.id, t)) ?? null),
+      trygghet: TERM_SEQUENCE.map((t) => tryggMap.get(key(s.id, t)) ?? null),
     })),
   };
 }

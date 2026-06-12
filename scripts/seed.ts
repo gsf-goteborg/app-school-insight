@@ -594,6 +594,33 @@ for (const s of students) {
   }
 }
 
+// ----------------------------- Historisk trivselenkät (tre tidigare läsår) -----------------------------
+// Trygghet var det enda måttet utan longitudinell linje. Historiken genereras
+// med egen RNG-ström (rng5) så att innevarande läsårs enkät (inkl. åk 8-dippen)
+// är orörd. Ingen dipp i historiken – åk 8-scenariot är ett innevarande-års-fenomen.
+const rng5 = mulberry32(66663333);
+const rnd5 = () => rng5();
+function gauss5(mean: number, sd: number) {
+  const u = 1 - rnd5();
+  const v = rnd5();
+  return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+{
+  const histTerms: { key: string; back: number }[] = [
+    { key: "HT2024", back: 1 }, { key: "VT2025", back: 1 },
+    { key: "HT2023", back: 2 }, { key: "VT2024", back: 2 },
+    { key: "HT2022", back: 3 }, { key: "VT2023", back: 3 },
+  ];
+  for (const s of students) {
+    const latent = 3.35 - s.absenceBase * 4 + (s.ability - 0.6) * 0.5;
+    for (const t of histTerms) {
+      if (s.grade - t.back < 1) continue;
+      const dim = (bias: number) => clamp(Math.round(latent + bias + gauss5(0, 0.5)), 1, 4);
+      wellbeingRows.push([s.id, t.key, dim(0.1), dim(0.2), dim((s.ability - 0.6) * 0.4)]);
+    }
+  }
+}
+
 // ----------------------------- Övriga skolor (huvudmannens område) -----------------------------
 // Framtidsskolan (ovan) är demons fullt utbyggda skola och dess data får ALDRIG
 // rubbas (testgruppen känner siffrorna). Här genereras två ytterligare skolor
@@ -710,6 +737,13 @@ for (const school of SCHOOLS.filter((s) => s.id !== HOME_SCHOOL)) {
       const rate = clamp(s.absenceBase - absDrift * t.back + gaussS(0, 0.012), 0, 0.6);
       xAttnTermRows.push([s.id, sid, t.key, t.days, Math.round(rate * t.days)]);
 
+      // Trivselenkät – alla terminer (övriga skolor har inget dipp-scenario).
+      {
+        const latent = 3.35 + prof.trygg - s.absenceBase * 4 + (s.ability - 0.6) * 0.5;
+        const dim = (bias: number) => clamp(Math.round(latent + bias + gaussS(0, 0.5)), 1, 4);
+        xWellbeingRows.push([s.id, sid, t.key, dim(0.1), dim(0.2), dim((s.ability - 0.6) * 0.4)]);
+      }
+
       // Kunskapsresultat
       if (gradeThen >= 7) {
         for (const subj of GRADED_SUBJECTS) {
@@ -738,12 +772,6 @@ for (const school of SCHOOLS.filter((s) => s.id !== HOME_SCHOOL)) {
       }
     }
 
-    // Trivselenkät (innevarande läsår)
-    const latent = 3.35 + prof.trygg - s.absenceBase * 4 + (s.ability - 0.6) * 0.5;
-    for (const t of TERMS) {
-      const dim = (bias: number) => clamp(Math.round(latent + bias + gaussS(0, 0.5)), 1, 4);
-      xWellbeingRows.push([s.id, sid, t.key, dim(0.1), dim(0.2), dim((s.ability - 0.6) * 0.4)]);
-    }
   }
 
   // Ekonomi (skalad efter elevantal) och HR per månad

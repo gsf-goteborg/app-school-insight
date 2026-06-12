@@ -50,7 +50,7 @@ export default async function SkolkortPage({ params }: { params: Promise<{ schoo
       </div>
 
       <Section title="Utveckling över tid" description="Fyra läsår – riktningen är viktigare än enskilda terminer.">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <Card className="p-5">
             <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Frånvaro per termin – lägre är bättre</p>
             <LineChart
@@ -68,6 +68,17 @@ export default async function SkolkortPage({ params }: { params: Promise<{ schoo
               categories={trends.labels}
               series={[{ name: "Meritvärde", data: own.merit.map((v) => (v != null ? Math.round(v * 10) / 10 : null)) }]}
               valueFormat="dec1"
+              height={240}
+            />
+          </Card>
+          <Card className="p-5">
+            <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Snitt trygghet (1–4) per termin</p>
+            <LineChart
+              ariaLabel={`Snitt trygghet per termin för ${kpis.name}`}
+              categories={trends.labels}
+              series={[{ name: "Trygghet", data: own.trygghet.map((v) => (v != null ? Math.round(v * 100) / 100 : null)) }]}
+              valueFormat="dec1"
+              yMax={4}
               height={240}
             />
           </Card>

@@ -203,7 +203,7 @@ export default function LedningPage() {
         title="Utveckling över tid"
         description="Skolans riktning över fyra läsår – rör vi oss åt rätt håll? Notera att kullarna skiftar mellan terminerna; jämför mönster, inte exakta nivåer."
       >
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card className="p-5">
             <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Snittmeritvärde (åk 7–10)</p>
             <LineChart
@@ -235,6 +235,17 @@ export default function LedningPage() {
               categories={termLabels}
               series={[{ name: "Frånvaro", data: series.map((p) => (p.absenceRate != null ? Math.round(p.absenceRate * 1000) / 10 : null)) }]}
               valueFormat="pct1"
+              height={240}
+            />
+          </Card>
+          <Card className="p-5">
+            <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Snitt trygghet (1–4, trivselenkäten)</p>
+            <LineChart
+              ariaLabel="Snitt trygghet per termin, fyra läsår"
+              categories={termLabels}
+              series={[{ name: "Trygghet", data: series.map((p) => (p.avgTrygghet != null ? Math.round(p.avgTrygghet * 100) / 100 : null)) }]}
+              valueFormat="dec1"
+              yMax={4}
               height={240}
             />
           </Card>

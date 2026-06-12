@@ -111,7 +111,8 @@ reorders. *Analysis only — nothing below is built.*
    spec-resurs". A light client-side simulering (sliders over FTE per arbetslag → recomputed
    flaggade-per-spec.tjänst + elevpeng-konsekvens) = spec §19's "simuleringsläge", scoped small.
 
-6. **Trygghet över tid** (vision: "Trends in … wellbeing"): wellbeing är det ENDA måttet utan
+6. ~~**Trygghet över tid**~~ ✅ _done, loop-iter 6 (2026-06-12, committed locally)_ — see changelog.
+   (Original: vision: "Trends in … wellbeing"): wellbeing är det ENDA måttet utan
    longitudinell linje (2 terminer; allt annat har 8). Small seed addition (wellbeing history per
    termin, samma backward-walk-mönster) + trygghet line in befintliga över-tid-sektioner (elev,
    ledning, skolkort). Cheap, completes the longitudinal story.
@@ -253,6 +254,18 @@ better decisions that improve student outcomes?* — weighted toward **early ide
 
 ## Changelog
 
+- _loop-iter 6_ ✅ (2026-06-12): **trygghet över tid** (gap-list #6) — wellbeing was the only measure
+  without a longitudinal line. Seed: FRA wellbeing history for 6 terms via NEW stream `rng5`
+  (66663333) — current-year survey incl. åk 8-dippen byte-identical (verified: VT2026 3,20, åk 8 2,15,
+  merit 251,4; history flat ~3,3 = dip is a this-year phenomenon, by design); non-FRA schools'
+  wellbeing moved INTO their allTerms loop (ALV/BJO reshuffled — fine, not yet public). ⚠️ Real bug
+  found & fixed: `getStudentWellbeing` picked "previous" as first non-current row → would have been
+  HT2022 with history; now explicitly HT2025. New `getStudentWellbeingHistory()`. Surfaces: **elev**
+  Trivsel-section's HT/VT-BarChart replaced with a per-termin LineChart (3 dimensioner, 8 terminer);
+  **/ledning** 4th chart "Snitt trygghet" (grid 2×2); **skolkort** 3rd chart (trygghet per termin,
+  `trygghet` added to getSchoolTermSeriesAll + avgTrygghet to getSchoolTermSeries). Verified live
+  (elev line, ledning 4 charts), tsc+eslint clean, build green, 0 console errors.
+  **Committed locally, NOT pushed.**
 - _loop-iter 5_ ✅ (2026-06-12): **resurssimulering "vad händer om"** (gap-list #5, spec §19
   simuleringsläge scoped small). `components/resource-sim.tsx` (client, ändrar/sparar inget) on
   **Personalplanering** after behov↔resurser: sliders för speciallärar-FTE per stadium (0–4, steg

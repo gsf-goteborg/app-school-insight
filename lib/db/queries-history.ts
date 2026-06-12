@@ -308,6 +308,7 @@ export interface SchoolTermPoint {
   shareWrittenOk: number | null;  // andel godtagbara omdömen (åk 2–6 då)
   shareLsrOk: number | null;      // andel i linje/över i LSR (åk 1–4 då)
   absenceRate: number | null;     // frånvaroandel (hela skolan)
+  avgTrygghet: number | null;     // snitt trygghet 1–4 (trivselenkäten)
 }
 
 export function getSchoolTermSeries(): SchoolTermPoint[] {
@@ -340,6 +341,11 @@ export function getSchoolTermSeries(): SchoolTermPoint[] {
        from (${TERM_ABSENCE_SQL}) group by term`,
     ).map((r) => [r.term, r.v]),
   );
+  const trygghet = new Map(
+    all<{ term: string; v: number }>(
+      `select term, avg(trygghet) v from wellbeing_surveys group by term`,
+    ).map((r) => [r.term, r.v]),
+  );
 
   return TERM_SEQUENCE.map((term) => ({
     term,
@@ -348,6 +354,7 @@ export function getSchoolTermSeries(): SchoolTermPoint[] {
     shareWrittenOk: written.get(term) ?? null,
     shareLsrOk: lsr.get(term) ?? null,
     absenceRate: absence.get(term) ?? null,
+    avgTrygghet: trygghet.get(term) ?? null,
   }));
 }
 

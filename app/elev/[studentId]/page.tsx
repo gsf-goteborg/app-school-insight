@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { PageHeader, Card, Section, Stat, Pill, Note } from "@/components/ui/primitives";
-import { LineChart, BarChart } from "@/components/charts";
+import { LineChart } from "@/components/charts";
 import { InterventionList } from "@/components/intervention-list";
 import { StudentActionPanel } from "@/components/student-action";
 import { AbsenceForecastCard } from "@/components/absence-forecast";
@@ -12,7 +12,7 @@ import {
 } from "@/lib/db/queries";
 import { getInterventionsForStudent, getComments } from "@/lib/db/queries-resources";
 import { getStudentSupport } from "@/lib/db/queries-progression";
-import { getStudentWellbeing } from "@/lib/db/queries-wellbeing";
+import { getStudentWellbeing, getStudentWellbeingHistory } from "@/lib/db/queries-wellbeing";
 import { getBehorighetForStudent, bucketMeta } from "@/lib/db/queries-behorighet";
 import { getStudentTrajectory, getStudentTermAbsence } from "@/lib/db/queries-history";
 import { TrajectoryTable } from "@/components/trajectory-table";
@@ -145,10 +145,10 @@ export default async function ElevPage({ params }: { params: Promise<{ studentId
   narrativeParas.push(supportParagraph(support));
   const narrative = buildNarrative(narrativeParas);
 
-  // Trivsel/wellbeing – dimensioner och jämförelse mot föregående termin
+  // Trivsel/wellbeing – dimensioner nu + utveckling över terminerna
   const wbDims = ["Trivsel", "Trygghet", "Arbetsro"] as const;
   const wbCurrent = wellbeing.current ? [wellbeing.current.trivsel, wellbeing.current.trygghet, wellbeing.current.studiero] : [];
-  const wbPrevious = wellbeing.previous ? [wellbeing.previous.trivsel, wellbeing.previous.trygghet, wellbeing.previous.studiero] : [];
+  const wbHistory = getStudentWellbeingHistory(studentId);
 
   return (
     <div>
@@ -299,16 +299,19 @@ export default async function ElevPage({ params }: { params: Promise<{ studentId
                 {wellbeing.trend != null && wellbeing.trend >= 0.5 && " – stigande."}
               </p>
             </Card>
-            {wbPrevious.length > 0 && (
+            {wbHistory.length >= 2 && (
               <Card className="p-5">
-                <BarChart
-                  ariaLabel={`Trivsel per dimension, HT 2025 mot VT 2026 för ${student.first_name} ${student.last_name}`}
-                  categories={[...wbDims]}
+                <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Utveckling över terminerna</p>
+                <LineChart
+                  ariaLabel={`Trivsel, trygghet och arbetsro per termin för ${student.first_name} ${student.last_name}`}
+                  categories={wbHistory.map((h) => h.label)}
                   series={[
-                    { name: "HT 2025", data: wbPrevious },
-                    { name: "VT 2026", data: wbCurrent },
+                    { name: "Trivsel", data: wbHistory.map((h) => h.trivsel) },
+                    { name: "Trygghet", data: wbHistory.map((h) => h.trygghet) },
+                    { name: "Arbetsro", data: wbHistory.map((h) => h.studiero) },
                   ]}
                   valueFormat="dec1"
+                  yMax={4}
                   height={240}
                 />
               </Card>

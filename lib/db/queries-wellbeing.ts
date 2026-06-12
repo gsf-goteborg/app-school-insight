@@ -1,6 +1,6 @@
 import "server-only";
 import { all, one } from "./index";
-import { CURRENT_TERM } from "@/lib/constants";
+import { CURRENT_TERM, TERM_SEQUENCE, termShort } from "@/lib/constants";
 
 // ---------------------------------------------------------------------------
 // Trivsel / wellbeing (§ vision: wellbeing-data som tidig indikator).
@@ -36,9 +36,34 @@ export function getStudentWellbeing(studentId: string): StudentWellbeing {
     studentId,
   ).map(withAvg);
   const current = rows.find((r) => r.term === CURRENT_TERM) ?? null;
-  const previous = rows.find((r) => r.term !== CURRENT_TERM) ?? null;
+  // "Föregående" = höstterminen samma läsår (inte äldsta raden i historiken).
+  const previous = rows.find((r) => r.term === "HT2025") ?? null;
   const trend = current && previous ? current.avg - previous.avg : null;
   return { current, previous, trend };
+}
+
+/** Trivselenkätens dimensioner per termin (upp till fyra läsår) för en elev. */
+export interface WellbeingHistoryPoint {
+  term: string;
+  label: string;
+  trivsel: number;
+  trygghet: number;
+  studiero: number;
+}
+
+export function getStudentWellbeingHistory(studentId: string): WellbeingHistoryPoint[] {
+  const rows = all<{ term: string; trivsel: number; trygghet: number; studiero: number }>(
+    `select term, trivsel, trygghet, studiero from wellbeing_surveys where student_id = ?`,
+    studentId,
+  );
+  const byTerm = new Map(rows.map((r) => [r.term, r]));
+  return TERM_SEQUENCE.filter((t) => byTerm.has(t)).map((t) => ({
+    term: t,
+    label: termShort(t),
+    trivsel: byTerm.get(t)!.trivsel,
+    trygghet: byTerm.get(t)!.trygghet,
+    studiero: byTerm.get(t)!.studiero,
+  }));
 }
 
 export interface WellbeingSummary {
