@@ -4,6 +4,7 @@ import { BarChart, LineChart } from "@/components/charts";
 import { getStaffingSummary, getStaffingBySubject, getArbetslagLoad } from "@/lib/db/queries-resources";
 import { getHrSummary, getHrMonthly, getSickByArbetslag } from "@/lib/db/queries-hr";
 import { getArbetslagAlignment } from "@/lib/db/queries-alignment";
+import { ResourceSim } from "@/components/resource-sim";
 import { pct, num } from "@/lib/format";
 
 const monthShort = new Intl.DateTimeFormat("sv-SE", { month: "short" });
@@ -234,6 +235,21 @@ export default function PersonalPage() {
             Använd detta tillsammans med bemanningsläget för att överväga omfördelning av stöd.
           </Note>
         )}
+      </Section>
+
+      <Section
+        title="Simulera omfördelning – vad händer om?"
+        description="Prova en annan fördelning av speciallärartjänsterna och se belastning och kostnad räknas om direkt. Underlag för samtalet om omfördelning – inget ändras eller sparas."
+      >
+        <ResourceSim
+          rows={alignment.map((a) => ({
+            arbetslag: a.arbetslag,
+            grades: a.grades,
+            flagged: a.flagged,
+            hog: a.hog,
+            specialFte: a.specialFte,
+          }))}
+        />
       </Section>
 
       <Note tone="info">

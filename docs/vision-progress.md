@@ -103,7 +103,8 @@ reorders. *Analysis only — nothing below is built.*
    frontend is NOT ported. Ranked below 1–3 because prediction adds marginal *earliness* on top of
    five existing lenses, while 1–3 convert existing identification into action.
 
-5. **Resurssimulering — "vad händer om"** (vision: success measure 3 "more effective allocation of
+5. ~~**Resurssimulering — "vad händer om"**~~ ✅ _done, loop-iter 5 (2026-06-12, committed locally)_ —
+   see changelog. (vision: success measure 3 "more effective allocation of
    resources and support"; skolledare-criterion "how resources and staffing align with needs").
    Behov↔resurser is descriptive today; the decision it should support is t.ex. "flytta 0,5
    speciallärartjänst från mellan- till högstadiet" or "vad kostar att täcka åk 10:s saknade
@@ -252,6 +253,15 @@ better decisions that improve student outcomes?* — weighted toward **early ide
 
 ## Changelog
 
+- _loop-iter 5_ ✅ (2026-06-12): **resurssimulering "vad händer om"** (gap-list #5, spec §19
+  simuleringsläge scoped small). `components/resource-sim.tsx` (client, ändrar/sparar inget) on
+  **Personalplanering** after behov↔resurser: sliders för speciallärar-FTE per stadium (0–4, steg
+  0,25) → live flaggade/tjänst per stadium, total-FTE-delta med kostnad (antagande 760 tkr/år per
+  tjänst, redovisat), spridningsmått, "Fördela efter behov"-knapp (proportionellt mot flaggade,
+  samma totala FTE) + Återställ. Demo proof: behovsfördelning med oförändrad bemanning tar
+  spridningen 49 → 4 (82/40/33 → 52/48/50 flaggade/tjänst). Ärlighetsnot: statisk belastningsmodell,
+  inte elevutfall. Verified live (sliders, knappar, pills), tsc+eslint clean, build green,
+  0 console errors. **Committed locally, NOT pushed.**
 - _loop-iter 4_ ✅ (2026-06-12): **frånvaroprognos** (gap-list #4, shipped as PLAN B — transparent
   additiv modell i stället för joblib-migrering; security classifier blocked pickle-deserialization
   from the sibling repo, rightly — needs explicit user authorization, UX is model-swappable later).
