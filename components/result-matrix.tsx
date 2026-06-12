@@ -138,7 +138,7 @@ export function ResultMatrix() {
         <Note tone="neutral">
           <strong>Så beräknas matrisen.</strong> Nivå = snittresultat vårterminen 2026 (betygspoäng åk 7–10, bedömningsnivåer
           åk 1–6); hög ≈ snitt C eller tydligt över förväntan, låg = under snitt D respektive klart under &quot;i linje&quot;.
-          Trend = samma flerterminslutning som i Fallande trend-linsen (minst fyra terminer). Angreppssättet är inspirerat
+          Trend = samma flerterminslutning som i underlaget Fallande trend (minst fyra terminer). Angreppssättet är inspirerat
           av en huvudkomponentanalys (PCA) på dessa mått – där laddar första komponenten på nivå och andra på trend – men
           axlarna används direkt så att varje elevs placering går att förklara. Gruppen &quot;låga resultat – står stilla
           eller faller&quot; ({num(counts.lag_still)} elever) fångas redan i{" "}

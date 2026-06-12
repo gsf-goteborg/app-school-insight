@@ -1,8 +1,8 @@
 # Vision-progress
 
-## ▶️ LOOP ACTIVE (user-invoked /loop 2026-06-12) — work through "🎯 VIKTIGAST KVAR MOT VISIONEN"
-## top-down, one item per iteration: implement, verify (seed-invariants, tsc, eslint, build, preview),
-## **commit locally WITHOUT push**, update changelog + this header. Loop until the user says "stop".
+## ⛔ LOOP STOPPED (user said "stop" 2026-06-12 after 7 iterations + idle-QA) — do not self-schedule.
+## A stray ScheduleWakeup may still fire (~14:18): HALT immediately, do not reschedule, do not build.
+## Only resume if the user explicitly types `/loop …` again.
 
 ## 🔁 HANDOFF — current state (read this first)
 
@@ -257,6 +257,23 @@ better decisions that improve student outcomes?* — weighted toward **early ide
 
 ## Changelog
 
+- _review feedback pass_ ✅ (2026-06-12, user's granskning of the 7 loop commits):
+  - **"Linser" → "underlag"** in ALL user-facing copy (user: begreppet är inte vedertaget i skolvärlden) —
+    prioritera page/stats/filters/pills ("Flaggas i flera underlag"), ledning cards + Veckans fokus,
+    ActionCoverage, milestones, behörighet/elev/matrix descriptions. Code-internal names (LensKey etc.)
+    unchanged. NOTE: substring checks for "lins" false-positive on "Sko**lins**ikt".
+  - **Ledningsöversikt tightened** (the quote, again): 6 sections → 4. Åtgärdstäckning folded into
+    Veckans fokus; "Att agera på" (7 cards) collapsed into a Disclosure "Hela åtgärdskön";
+    insatsuppföljning = ONE card (overdue list + "N kommande, närmast {datum}"-rad); "Utveckling över
+    tid" (4 charts + HT→VT-strip) replaced by **"Riktning över fyra läsår"** — 4 klartext-deltas with
+    tone + charts behind Disclosure "Visa kurvorna"; HT→VT-strip dropped (getSchoolTermTrends no longer
+    used on ledning).
+  - ⚠️ **Honesty fix found during the pass:** merit in the riktningsrad showed "−26,8 sedan HT 2022" —
+    a COHORT-COMPOSITION ARTIFACT (HT2022 has betyg for only 40 elever vs 160 now). Merit deliberately
+    EXCLUDED from the riktningsrad (comment in code); lives only in the curves where the kullskifte-
+    caveat stands. Riktningsraden = omdömen/LSR/frånvaro/trygghet (stable population definitions).
+  - Verified live (4 sections, 2 disclosures, honest riktning), tsc+eslint clean, build green.
+    **Committed locally, NOT pushed** (user still reviewing).
 - _loop-iter 7_ ✅ (2026-06-12): **gap-list #7 (smått)** — (a) **lens 6 "Växande frånvaro"** i
   /prioritera: `getGrowingAbsence()` i queries-history (regressionslutning ≥ +0,8 p.e./termin över ≥5
   terminer ur TERM_ABSENCE_SQL OCH ≥ 8 % nu → 20 elever; multi-lens 112→116, utan-stödprocess 89→92);

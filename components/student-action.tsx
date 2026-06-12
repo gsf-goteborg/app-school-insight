@@ -156,7 +156,7 @@ export function ActionCoverage({ studentIds }: { studentIds: string[] }) {
         <div className="h-full bg-[var(--gbg-green)]" style={{ width: `${share * 100}%` }} />
       </div>
       <p className="mt-2 text-sm text-[var(--text-muted)]">
-        {ready && total > 0 ? `${pct(share, 0)} av eleverna som fångas av flera linser har en åtgärd igång. ` : ""}
+        {ready && total > 0 ? `${pct(share, 0)} av eleverna som flaggas i flera underlag har en åtgärd igång. ` : ""}
         Åtgärder startas från Prioriterade elever eller elevens sida och sparas i din webbläsare (demo).
       </p>
     </Card>

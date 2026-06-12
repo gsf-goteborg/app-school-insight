@@ -27,7 +27,7 @@ export default function BehorighetPage() {
       <PageHeader
         kicker="Behörighetsprognos"
         title="Sannolikhet för behörighet till yrkesprogram"
-        description="En utfallsnära lins som kompletterar Tidig upptäckt: en skattad sannolikhet att varje elev (åk 4–10) når behörighet till gymnasiets yrkesprogram, indelad i Risk 0–3."
+        description="Ett utfallsnära underlag som kompletterar Tidig upptäckt: en skattad sannolikhet att varje elev (åk 4–10) når behörighet till gymnasiets yrkesprogram, indelad i Risk 0–3."
       />
 
       <Card className="mb-8 p-5">

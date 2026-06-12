@@ -85,7 +85,7 @@ export function PriorityList({ rows }: { rows: PriorityStudent[] }) {
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="mr-1 text-sm text-[var(--text-muted)]">Urval:</span>
           <Chip active={multiOnly} onClick={() => setMultiOnly(true)}>
-            Flera linser ({num(multiCount)})
+            Flera underlag ({num(multiCount)})
           </Chip>
           <Chip active={!multiOnly} onClick={() => setMultiOnly(false)}>
             Alla ({num(rows.length)})
@@ -99,7 +99,7 @@ export function PriorityList({ rows }: { rows: PriorityStudent[] }) {
           </Chip>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-sm text-[var(--text-muted)]">Lins:</span>
+          <span className="mr-1 text-sm text-[var(--text-muted)]">Underlag:</span>
           <Chip active={lens === null} onClick={() => setLens(null)}>Alla</Chip>
           {LENS_FILTERS.map((l) => (
             <Chip key={l.key} active={lens === l.key} onClick={() => setLens(l.key)}>
@@ -119,7 +119,7 @@ export function PriorityList({ rows }: { rows: PriorityStudent[] }) {
       <p className="mb-3 text-sm text-[var(--text-muted)]">
         {shown.length > CAP && !showAll
           ? `Visar de ${num(CAP)} högst prioriterade av ${num(shown.length)} elever i urvalet.`
-          : `Visar ${num(shown.length)} elever, sorterade på antal linser och samlad prioritet.`}
+          : `Visar ${num(shown.length)} elever, sorterade på antal underlag och samlad prioritet.`}
       </p>
 
       {shown.length === 0 ? (
@@ -135,7 +135,7 @@ export function PriorityList({ rows }: { rows: PriorityStudent[] }) {
                       {r.name}
                     </Link>
                     <Pill tone={r.lenses.length >= 3 ? "kritisk" : r.lenses.length === 2 ? "uppmarksam" : "neutral"}>
-                      {r.lenses.length} {r.lenses.length === 1 ? "lins" : "linser"}
+                      {r.lenses.length} underlag
                     </Pill>
                     {r.formalGap && <Pill tone="kritisk">Saknar formell stödprocess</Pill>}
                   </div>

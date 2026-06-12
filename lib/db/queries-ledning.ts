@@ -49,9 +49,9 @@ export function getActionQueue(): ActionItem[] {
       tone: warning.hog > 0 ? "kritisk" : "positiv",
     },
     {
-      label: "Flera linser utan stödprocess",
+      label: "Flera underlag utan stödprocess",
       value: String(priority.multiNoFormal),
-      desc: "fångas av minst två linser men saknar åtgärdsprogram och utredning",
+      desc: "flaggas i minst två underlag men saknar åtgärdsprogram och utredning",
       href: "/prioritera",
       tone: priority.multiNoFormal > 0 ? "kritisk" : "positiv",
     },
@@ -200,8 +200,8 @@ export function getVeckansFokus(): FokusItem[] {
       score: 4.5,
       item: {
         title: `Stäng stödgapet för ${priority.multiNoFormal} elever`,
-        varfor: "De fångas av minst två oberoende linser men saknar både åtgärdsprogram och utredning – störst risk att falla mellan stolarna.",
-        nastaSteg: "Be elevhälsan prioritera en första kartläggning, börja med dem som fångas av flest linser.",
+        varfor: "De flaggas i minst två oberoende underlag men saknar både åtgärdsprogram och utredning – störst risk att falla mellan stolarna.",
+        nastaSteg: "Be elevhälsan prioritera en första kartläggning, börja med dem som flaggas i flest underlag.",
         href: "/prioritera",
         tone: "kritisk",
       },

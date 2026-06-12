@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { RoleGate } from "@/components/role-gate";
-import { PageHeader, Card, Section, Pill, Note } from "@/components/ui/primitives";
+import { PageHeader, Card, Section, Pill, Note, Disclosure } from "@/components/ui/primitives";
 import { getActionQueue, getStadiumStatus, getInsatsUppfoljning, getVeckansFokus } from "@/lib/db/queries-ledning";
-import { getSchoolTermTrends } from "@/lib/db/queries-trend";
 import { getSchoolTermSeries } from "@/lib/db/queries-history";
 import { getPriorityStudents } from "@/lib/db/queries-priority";
 import { LineChart } from "@/components/charts";
@@ -10,6 +9,12 @@ import { ActionCoverage } from "@/components/student-action";
 import { INTERVENTION_LEVEL_LABEL, type InterventionLevel } from "@/lib/constants";
 import type { Intervention } from "@/lib/db/queries-resources";
 import { pct, num, delta, deltaPct, dateShort } from "@/lib/format";
+
+// Skolledarens kontrollvy. Designprincip (testgruppscitat): "Jag vill inte ha
+// mer data – jag vill veta vad jag ska göra och varför det ser ut som det gör."
+// Därför: Veckans fokus + åtgärdstäckning överst, stadium-läget och uppföljningen
+// som enda tabeller, riktningen som slutsatser i klartext – kurvor och hela
+// åtgärdskön ett klick bort (Disclosure).
 
 const ATTENTION_TONE = {
   Prioritera: "kritisk",
@@ -26,23 +31,55 @@ const ACTION_ACCENT = {
 
 export default function LedningPage() {
   const actions = getActionQueue();
-  // Elever som fångas av flera linser – underlag för åtgärdstäckningen (klientkortet
+  // Elever som flaggas i flera underlag – grund för åtgärdstäckningen (klientkortet
   // korsar id-listan med de åtgärder som startats i webbläsarens demo-store).
-  const multiLensIds = getPriorityStudents()
+  const multiIds = getPriorityStudents()
     .filter((s) => s.lenses.length >= 2)
     .map((s) => s.student_id);
   const stadia = getStadiumStatus();
   const { overdue, upcoming } = getInsatsUppfoljning();
-  const trends = getSchoolTermTrends();
   const series = getSchoolTermSeries();
   const termLabels = series.map((p) => p.label);
+
+  // Riktning över fyra läsår: första vs senaste termin med data, per mått.
+  const firstLast = (vals: (number | null)[]) => {
+    const xs = vals.filter((v): v is number => v != null);
+    return xs.length >= 2 ? { first: xs[0], last: xs[xs.length - 1] } : null;
+  };
+  const riktning: { label: string; value: string; deltaText: string; tone: "positiv" | "uppmarksam" | "neutral" }[] = [];
+  const pushDir = (
+    label: string,
+    fl: { first: number; last: number } | null,
+    fmt: (v: number) => string,
+    dfmt: (d: number) => string,
+    lowerBetter = false,
+  ) => {
+    if (!fl) return;
+    const d = fl.last - fl.first;
+    const improved = lowerBetter ? d < 0 : d > 0;
+    const meaningful = Math.abs(d) > (lowerBetter ? 0.002 : 0.005);
+    riktning.push({
+      label,
+      value: fmt(fl.last),
+      deltaText: `${dfmt(d)} sedan HT 2022`,
+      tone: !meaningful ? "neutral" : improved ? "positiv" : "uppmarksam",
+    });
+  };
+  // OBS: snittmeritvärdet utelämnas medvetet här – populationen med betyg
+  // skiftar kraftigt mellan terminerna (HT 2022 = endast 40 elever), så en
+  // delta-siffra vore en sammansättningsartefakt. Meriten finns i kurvorna,
+  // där förbehållet om kullskiften står.
+  pushDir("Godtagbara omdömen åk 2–6", firstLast(series.map((p) => p.shareWrittenOk)), (v) => pct(v, 0), (d) => `${deltaPct(d)} p.e.`);
+  pushDir("Läsa/skriva/räkna åk 1–4", firstLast(series.map((p) => p.shareLsrOk)), (v) => pct(v, 0), (d) => `${deltaPct(d)} p.e.`);
+  pushDir("Frånvaro", firstLast(series.map((p) => p.absenceRate)), (v) => pct(v, 1), (d) => `${deltaPct(d)} p.e.`, true);
+  pushDir("Trygghet", firstLast(series.map((p) => p.avgTrygghet)), (v) => `${num(v, 1)}/4`, (d) => delta(d, 1));
 
   return (
     <RoleGate view="ledning">
       <PageHeader
         kicker="Ledningsöversikt"
         title="Skolledarens kontrollvy"
-        description="Det viktigaste att agera på just nu, läget per stadium och hur insatsarbetet följs upp. Varje kort länkar direkt till underlaget."
+        description="Vad du behöver agera på, om åtgärderna hänger med och åt vilket håll skolan rör sig. Allt länkar till sitt underlag – detaljerna ligger ett klick bort."
       />
 
       <Section
@@ -78,35 +115,14 @@ export default function LedningPage() {
             </Link>
           ))}
         </div>
-      </Section>
-
-      <Section
-        title="Åtgärdstäckning"
-        description="Sluter loopen från upptäckt till handling: andelen prioriterade elever (flera linser) med en påbörjad åtgärd."
-      >
-        <ActionCoverage studentIds={multiLensIds} />
-      </Section>
-
-      <Section
-        title="Att agera på"
-        description="Hela åtgärdskön med direktlänkar – grönt betyder att inget kräver agerande just nu."
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {actions.map((a) => (
-            <Link key={a.label} href={a.href} className="block">
-              <Card className="h-full p-4 transition-shadow hover:shadow-[var(--shadow-card-hover,var(--shadow-card))]">
-                <p className="text-sm font-medium text-[var(--text-muted)]">{a.label}</p>
-                <p className={`mt-1 font-display text-3xl tabular ${ACTION_ACCENT[a.tone]}`}>{a.value}</p>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">{a.desc} →</p>
-              </Card>
-            </Link>
-          ))}
+        <div className="mt-4">
+          <ActionCoverage studentIds={multiIds} />
         </div>
       </Section>
 
       <Section
         title="Läget per stadium"
-        description="Behov (signaler, trygghet, risk) mot resurser (särskilt stöd) per stadium. Status är den allvarligaste årskursstatusen inom stadiet."
+        description="Behov (signaler, trygghet, risk) mot resurser (särskilt stöd). Status är den allvarligaste årskursstatusen inom stadiet."
       >
         <Card className="table-card">
           <table className="w-full text-[15px]">
@@ -159,121 +175,125 @@ export default function LedningPage() {
           Fördjupa per <Link href="/arskurs" className="font-semibold text-[var(--gbg-blue)] hover:underline">årskurs</Link>,{" "}
           <Link href="/klass" className="font-semibold text-[var(--gbg-blue)] hover:underline">klass</Link> eller i{" "}
           <Link href="/personal" className="font-semibold text-[var(--gbg-blue)] hover:underline">personalplaneringen</Link>{" "}
-          (behov ↔ resurser per arbetslag).
+          – där kan du också <strong>simulera omfördelning</strong> av stödresurser.
         </p>
       </Section>
 
       <Section
-        title="Ger insatserna effekt – och följs de upp?"
-        description="Pågående och planerade insatser mot sina uppföljningsdatum. Uppmätt effekt per insats finns på insatsens sida."
+        title="Följs insatserna upp?"
+        description="Insatser med passerat uppföljningsdatum kräver agerande. Uppmätt effekt finns på respektive insats sida."
       >
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Card className="p-5">
-            <p className="mb-3 text-sm font-semibold text-[var(--text-muted)]">
-              Passerad uppföljning ({num(overdue.length)})
-            </p>
-            {overdue.length === 0 ? (
-              <p className="text-[var(--text-muted)]">Inga insatser har passerat sitt uppföljningsdatum.</p>
-            ) : (
-              <ul className="divide-y divide-[var(--border-subtle)]">
-                {overdue.map((i) => (
-                  <InsatsRow key={i.intervention_id} insats={i} overdue />
-                ))}
-              </ul>
-            )}
-          </Card>
-          <Card className="p-5">
-            <p className="mb-3 text-sm font-semibold text-[var(--text-muted)]">
-              Kommande uppföljningar ({num(upcoming.length)})
-            </p>
-            {upcoming.length === 0 ? (
-              <p className="text-[var(--text-muted)]">Inga planerade uppföljningar.</p>
-            ) : (
-              <ul className="divide-y divide-[var(--border-subtle)]">
-                {upcoming.slice(0, 6).map((i) => (
-                  <InsatsRow key={i.intervention_id} insats={i} />
-                ))}
-              </ul>
-            )}
-          </Card>
-        </div>
-      </Section>
-
-      <Section
-        title="Utveckling över tid"
-        description="Skolans riktning över fyra läsår – rör vi oss åt rätt håll? Notera att kullarna skiftar mellan terminerna; jämför mönster, inte exakta nivåer."
-      >
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Card className="p-5">
-            <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Snittmeritvärde (åk 7–10)</p>
-            <LineChart
-              ariaLabel="Snittmeritvärde per termin, fyra läsår"
-              categories={termLabels}
-              series={[{ name: "Meritvärde", data: series.map((p) => (p.avgMerit != null ? Math.round(p.avgMerit * 10) / 10 : null)) }]}
-              valueFormat="dec1"
-              height={240}
-            />
-          </Card>
-          <Card className="p-5">
-            <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Andel godtagbara resultat</p>
-            <LineChart
-              ariaLabel="Andel godtagbara omdömen och läsa-skriva-räkna-nivåer per termin, fyra läsår"
-              categories={termLabels}
-              series={[
-                { name: "Omdömen (åk 2–6)", data: series.map((p) => (p.shareWrittenOk != null ? Math.round(p.shareWrittenOk * 100) : null)) },
-                { name: "Läsa/skriva/räkna (åk 1–4)", data: series.map((p) => (p.shareLsrOk != null ? Math.round(p.shareLsrOk * 100) : null)) },
-              ]}
-              valueFormat="pct0"
-              yMax={100}
-              height={240}
-            />
-          </Card>
-          <Card className="p-5">
-            <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Frånvaro (hela skolan) – lägre är bättre</p>
-            <LineChart
-              ariaLabel="Frånvaroandel per termin, fyra läsår"
-              categories={termLabels}
-              series={[{ name: "Frånvaro", data: series.map((p) => (p.absenceRate != null ? Math.round(p.absenceRate * 1000) / 10 : null)) }]}
-              valueFormat="pct1"
-              height={240}
-            />
-          </Card>
-          <Card className="p-5">
-            <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Snitt trygghet (1–4, trivselenkäten)</p>
-            <LineChart
-              ariaLabel="Snitt trygghet per termin, fyra läsår"
-              categories={termLabels}
-              series={[{ name: "Trygghet", data: series.map((p) => (p.avgTrygghet != null ? Math.round(p.avgTrygghet * 100) / 100 : null)) }]}
-              valueFormat="dec1"
-              yMax={4}
-              height={240}
-            />
-          </Card>
-        </div>
-        <Card className="mt-4 p-4">
-          <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Innevarande läsår (HT → VT)</p>
-          <div className="flex flex-wrap gap-x-5 gap-y-2">
-            {trends.map((t) => {
-              const d = t.vt - t.ht;
-              const up = d > 0.0005;
-              const down = d < -0.0005;
-              return (
-                <span key={t.key} className="flex items-center gap-2 text-sm">
-                  <span className="text-[var(--text-muted)]">{t.label}:</span>
-                  <span className="tabular font-semibold">{t.format === "pct" ? pct(t.vt, 1) : num(t.vt, 1)}</span>
-                  <Pill tone={up ? "positiv" : down ? "uppmarksam" : "neutral"}>
-                    {t.format === "pct" ? `${deltaPct(d)} p.e.` : delta(d, 1)}
-                  </Pill>
-                </span>
-              );
-            })}
-          </div>
+        <Card className="p-5">
+          {overdue.length === 0 ? (
+            <p className="text-[var(--text-muted)]">Inga insatser har passerat sitt uppföljningsdatum.</p>
+          ) : (
+            <ul className="divide-y divide-[var(--border-subtle)]">
+              {overdue.map((i) => (
+                <InsatsRow key={i.intervention_id} insats={i} overdue />
+              ))}
+            </ul>
+          )}
+          <p className="mt-3 border-t border-[var(--border-subtle)] pt-3 text-sm text-[var(--text-muted)]">
+            {num(upcoming.length)} kommande uppföljningar
+            {upcoming[0]?.follow_up_date ? `, närmast ${dateShort(upcoming[0].follow_up_date)}` : ""}.{" "}
+            <Link href="/insatser" className="font-semibold text-[var(--gbg-blue)] hover:underline">
+              Alla insatser →
+            </Link>
+          </p>
         </Card>
       </Section>
 
+      <Section
+        title="Riktning över fyra läsår"
+        description="Rör sig skolan åt rätt håll? Grönt = rätt riktning. Kullarna skiftar mellan terminerna – läs mönster, inte exakta nivåer."
+      >
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {riktning.map((r) => (
+            <Card key={r.label} className="p-4">
+              <p className="text-sm font-medium text-[var(--text-muted)]">{r.label}</p>
+              <p className="mt-1 font-display text-2xl tabular text-[var(--text-strong)]">{r.value}</p>
+              <p className="mt-1">
+                <Pill tone={r.tone}>{r.deltaText}</Pill>
+              </p>
+            </Card>
+          ))}
+        </div>
+        <div className="mt-4">
+          <Disclosure
+            title="Visa kurvorna"
+            description="Samma fyra mått per termin över fyra läsår."
+          >
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <div>
+                <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Snittmeritvärde (åk 7–10)</p>
+                <LineChart
+                  ariaLabel="Snittmeritvärde per termin, fyra läsår"
+                  categories={termLabels}
+                  series={[{ name: "Meritvärde", data: series.map((p) => (p.avgMerit != null ? Math.round(p.avgMerit * 10) / 10 : null)) }]}
+                  valueFormat="dec1"
+                  height={220}
+                />
+              </div>
+              <div>
+                <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Andel godtagbara resultat</p>
+                <LineChart
+                  ariaLabel="Andel godtagbara omdömen och läsa-skriva-räkna-nivåer per termin, fyra läsår"
+                  categories={termLabels}
+                  series={[
+                    { name: "Omdömen (åk 2–6)", data: series.map((p) => (p.shareWrittenOk != null ? Math.round(p.shareWrittenOk * 100) : null)) },
+                    { name: "Läsa/skriva/räkna (åk 1–4)", data: series.map((p) => (p.shareLsrOk != null ? Math.round(p.shareLsrOk * 100) : null)) },
+                  ]}
+                  valueFormat="pct0"
+                  yMax={100}
+                  height={220}
+                />
+              </div>
+              <div>
+                <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Frånvaro – lägre är bättre</p>
+                <LineChart
+                  ariaLabel="Frånvaroandel per termin, fyra läsår"
+                  categories={termLabels}
+                  series={[{ name: "Frånvaro", data: series.map((p) => (p.absenceRate != null ? Math.round(p.absenceRate * 1000) / 10 : null)) }]}
+                  valueFormat="pct1"
+                  height={220}
+                />
+              </div>
+              <div>
+                <p className="mb-2 text-sm font-semibold text-[var(--text-muted)]">Snitt trygghet (1–4)</p>
+                <LineChart
+                  ariaLabel="Snitt trygghet per termin, fyra läsår"
+                  categories={termLabels}
+                  series={[{ name: "Trygghet", data: series.map((p) => (p.avgTrygghet != null ? Math.round(p.avgTrygghet * 100) / 100 : null)) }]}
+                  valueFormat="dec1"
+                  yMax={4}
+                  height={220}
+                />
+              </div>
+            </div>
+          </Disclosure>
+        </div>
+      </Section>
+
+      <Disclosure
+        title="Hela åtgärdskön"
+        description="Samtliga bevakade områden med direktlänkar – grönt betyder att inget kräver agerande just nu."
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {actions.map((a) => (
+            <Link key={a.label} href={a.href} className="block">
+              <Card className="h-full p-4">
+                <p className="text-sm font-medium text-[var(--text-muted)]">{a.label}</p>
+                <p className={`mt-1 font-display text-3xl tabular ${ACTION_ACCENT[a.tone]}`}>{a.value}</p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">{a.desc} →</p>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </Disclosure>
+
       <Note tone="info">
-        Demodata. Vyn sammanställer de befintliga modellerna – tidig upptäckt, behörighetsprognos,
-        utredningsskuld och utvecklingslinsen – och ersätter inte verksamhetens samlade professionella bedömning.
+        Demodata. Vyn sammanställer skolans befintliga underlag – tidig upptäckt, behörighetsprognos,
+        utredningsskuld och utvecklingsbilden – och ersätter inte verksamhetens samlade professionella bedömning.
       </Note>
     </RoleGate>
   );

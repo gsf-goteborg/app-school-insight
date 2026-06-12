@@ -98,7 +98,7 @@ export function Milestones() {
           ))}
           {worklist.length > WORKLIST_CAP && (
             <li className="flex items-center rounded-lg border border-dashed border-[var(--border-strong)] px-3 py-2 text-sm text-[var(--text-muted)]">
-              + {num(worklist.length - WORKLIST_CAP)} elever till – korsas med linserna i{" "}
+              + {num(worklist.length - WORKLIST_CAP)} elever till – korsas med övriga underlag i{" "}
               <Link href="/prioritera" className="ml-1 font-semibold text-[var(--gbg-blue)] underline">Prioriterade elever</Link>.
             </li>
           )}

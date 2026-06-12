@@ -193,7 +193,7 @@ export default async function ElevPage({ params }: { params: Promise<{ studentId
       {beh && behMeta && (
         <Section
           title="Behörighetsprognos"
-          description="Skattad sannolikhet för behörighet till yrkesprogram – en kompletterande lins (se Behörighetsprognos)."
+          description="Skattad sannolikhet för behörighet till yrkesprogram – ett kompletterande underlag (se Behörighetsprognos)."
         >
           <Card className="p-5">
             <div className="flex flex-wrap items-center gap-4">

@@ -14,14 +14,14 @@ export default function PrioriteraPage() {
       <PageHeader
         kicker="Prioriterade elever"
         title="Elever att prioritera"
-        description="Korsar skolans sex linser – tidiga signaler, behörighetsprognos, ihållande svårigheter, tappar mark, fallande flerårstrend och växande frånvaro – till en samlad bild. Elever som fångas av flera oberoende linser behöver sannolikt mest, särskilt utan formell stödprocess."
+        description="Korsar skolans sex underlag – tidiga signaler, behörighetsprognos, ihållande svårigheter, tappar mark, fallande flerårstrend och växande frånvaro – till en samlad bild. Elever som flaggas i flera oberoende underlag behöver sannolikt mest, särskilt utan formell stödprocess."
       />
 
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Stat label="Fångas av någon lins" value={num(summary.total)} hint="av 400 aktiva elever" />
-        <Stat label="Fångas av flera linser" value={num(summary.multi)} tone="uppmarksam" hint="minst två oberoende linser" />
+        <Stat label="Flaggas i något underlag" value={num(summary.total)} hint="av 400 aktiva elever" />
+        <Stat label="Flaggas i flera underlag" value={num(summary.multi)} tone="uppmarksam" hint="minst två oberoende underlag" />
         <Stat
-          label="Flera linser utan formell stödprocess"
+          label="Flera underlag utan formell stödprocess"
           value={num(summary.multiNoFormal)}
           tone="kritisk"
           hint="varken åtgärdsprogram eller utredning"
@@ -30,14 +30,14 @@ export default function PrioriteraPage() {
 
       <Section
         title="Samlad prioriteringslista"
-        description="Varje rad visar vilka linser som fångar eleven, med underlaget per lins, samt elevens stödstatus. Namnet länkar till elevens fullständiga underlag."
+        description="Varje rad visar vilka underlag som flaggar eleven och varför, samt elevens stödstatus. Namnet länkar till elevens fullständiga bild."
       >
         <PriorityList rows={rows} />
       </Section>
 
       <Disclosure
         title="Så fungerar prioriteringen"
-        description="Listan tillför ingen ny modell – den korsar de befintliga linserna per elev. Varje lins är granskningsbar i sin egen vy."
+        description="Listan tillför ingen ny modell – den korsar de befintliga underlagen per elev. Varje underlag är granskningsbart i sin egen vy."
       >
         <Card className="p-5">
           <ul className="space-y-2.5 text-[15px]">
@@ -51,9 +51,9 @@ export default function PrioriteraPage() {
             ))}
           </ul>
           <p className="mt-3 border-t border-[var(--border-subtle)] pt-3 text-sm text-[var(--text-muted)]">
-            Sorteringen väger samman linsernas allvarlighetsgrad och om eleven saknar formell stödprocess.
-            Linserna är delvis överlappande (de läser samma underliggande data på olika sätt) – att fångas
-            av flera är en stark indikation, inte ett bevis.
+            Sorteringen väger samman underlagens allvarlighetsgrad och om eleven saknar formell stödprocess.
+            Underlagen är delvis överlappande (de läser samma data på olika sätt) – att flaggas
+            i flera är en stark indikation, inte ett bevis.
           </p>
         </Card>
       </Disclosure>
