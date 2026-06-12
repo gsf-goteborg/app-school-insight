@@ -4,7 +4,9 @@ import { PageHeader, Card, Section, Pill, Note } from "@/components/ui/primitive
 import { getActionQueue, getStadiumStatus, getInsatsUppfoljning, getVeckansFokus } from "@/lib/db/queries-ledning";
 import { getSchoolTermTrends } from "@/lib/db/queries-trend";
 import { getSchoolTermSeries } from "@/lib/db/queries-history";
+import { getPriorityStudents } from "@/lib/db/queries-priority";
 import { LineChart } from "@/components/charts";
+import { ActionCoverage } from "@/components/student-action";
 import { INTERVENTION_LEVEL_LABEL, type InterventionLevel } from "@/lib/constants";
 import type { Intervention } from "@/lib/db/queries-resources";
 import { pct, num, delta, deltaPct, dateShort } from "@/lib/format";
@@ -24,6 +26,11 @@ const ACTION_ACCENT = {
 
 export default function LedningPage() {
   const actions = getActionQueue();
+  // Elever som fångas av flera linser – underlag för åtgärdstäckningen (klientkortet
+  // korsar id-listan med de åtgärder som startats i webbläsarens demo-store).
+  const multiLensIds = getPriorityStudents()
+    .filter((s) => s.lenses.length >= 2)
+    .map((s) => s.student_id);
   const stadia = getStadiumStatus();
   const { overdue, upcoming } = getInsatsUppfoljning();
   const trends = getSchoolTermTrends();
@@ -71,6 +78,13 @@ export default function LedningPage() {
             </Link>
           ))}
         </div>
+      </Section>
+
+      <Section
+        title="Åtgärdstäckning"
+        description="Sluter loopen från upptäckt till handling: andelen prioriterade elever (flera linser) med en påbörjad åtgärd."
+      >
+        <ActionCoverage studentIds={multiLensIds} />
       </Section>
 
       <Section

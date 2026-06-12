@@ -35,20 +35,33 @@ export interface UserIntervention {
   owner_role: string;
 }
 
+/** Pågående åtgärd per elev (åtgärdsloopen): var i processen är vi, vem äger
+ *  nästa steg. En post per elev – senaste uppdatering gäller. */
+export interface StudentAction {
+  student_id: string;
+  step: string;    // AtgardStep (lib/constants) – lagras som sträng
+  ansvarig: string;
+  note: string;
+  updated: string; // ISO-datum
+}
+
 interface StoreData {
   comments: UserComment[];
   interventions: UserIntervention[];
+  actions: StudentAction[];
 }
 
 interface StoreValue extends StoreData {
   addComment: (c: Omit<UserComment, "id" | "created">) => void;
   addIntervention: (i: Omit<UserIntervention, "id">) => void;
+  setAction: (a: Omit<StudentAction, "updated">) => void;
+  removeAction: (studentId: string) => void;
   reset: () => number;
   ready: boolean;
 }
 
 const KEY = "skolinsikt-demo-store";
-const EMPTY: StoreData = { comments: [], interventions: [] };
+const EMPTY: StoreData = { comments: [], interventions: [], actions: [] };
 const Ctx = createContext<StoreValue | null>(null);
 
 const listeners = new Set<() => void>();
@@ -71,6 +84,7 @@ function read(): StoreData {
       data = {
         comments: parsed.comments ?? [],
         interventions: parsed.interventions ?? [],
+        actions: parsed.actions ?? [],
       };
     } catch {
       data = EMPTY;
@@ -111,6 +125,7 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
   const value: StoreValue = {
     comments: data.comments,
     interventions: data.interventions,
+    actions: data.actions,
     ready,
     addComment: (c) =>
       write({
@@ -125,9 +140,23 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
         ...read(),
         interventions: [{ ...i, id: crypto.randomUUID() }, ...read().interventions],
       }),
+    setAction: (a) => {
+      const current = read();
+      write({
+        ...current,
+        actions: [
+          { ...a, updated: new Date().toISOString().slice(0, 10) },
+          ...current.actions.filter((x) => x.student_id !== a.student_id),
+        ],
+      });
+    },
+    removeAction: (studentId) => {
+      const current = read();
+      write({ ...current, actions: current.actions.filter((x) => x.student_id !== studentId) });
+    },
     reset: () => {
       const current = read();
-      const n = current.comments.length + current.interventions.length;
+      const n = current.comments.length + current.interventions.length + current.actions.length;
       write(EMPTY);
       return n;
     },

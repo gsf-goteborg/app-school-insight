@@ -218,3 +218,20 @@ export const INTERVENTION_STATUS_LABEL: Record<InterventionStatus, string> = {
 
 // --- Kommentarsnivå (§6.3) ---
 export type CommentScope = "student" | "class" | "grade";
+
+// --- Åtgärdsloop per elev (systematiskt närvaro-/stödarbete) ---
+// Processteg i skolans eskalering – ett ARBETSFLÖDE (vem gör vad härnäst),
+// aldrig nivåer eller en "trappa" som visas som omdöme om eleven.
+export type AtgardStep = "kontakt" | "kartlaggning" | "elevhalsa" | "utredning" | "avslutad";
+
+export const ATGARD_STEPS: { key: AtgardStep; label: string }[] = [
+  { key: "kontakt", label: "Vårdnadshavare kontaktad" },
+  { key: "kartlaggning", label: "Kartläggning pågår" },
+  { key: "elevhalsa", label: "Elevhälsan inkopplad" },
+  { key: "utredning", label: "Fördjupad utredning/samverkan" },
+  { key: "avslutad", label: "Avslutad – följs i ordinarie uppföljning" },
+];
+
+export const ATGARD_STEP_LABEL: Record<AtgardStep, string> = Object.fromEntries(
+  ATGARD_STEPS.map((s) => [s.key, s.label]),
+) as Record<AtgardStep, string>;

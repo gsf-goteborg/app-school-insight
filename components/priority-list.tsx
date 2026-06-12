@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { Card, Pill } from "./ui/primitives";
 import { num } from "@/lib/format";
+import { useDemoStore } from "./demo-store";
+import { ActionStatusPill, ActionEditor } from "./student-action";
 import type { PriorityStudent, LensKey, LensTone } from "@/lib/db/queries-priority";
 
 // Lokala (runtime-fria) listor så att inget dras in från server-only-modulen.
@@ -52,8 +54,10 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
 export function PriorityList({ rows }: { rows: PriorityStudent[] }) {
   // Standardläget visar elever som fångas av minst två linser – det är de som
   // sannolikt behöver mest. "Alla" visar även en-lins-eleverna.
+  const { actions } = useDemoStore();
   const [multiOnly, setMultiOnly] = useState(true);
   const [gapOnly, setGapOnly] = useState(false);
+  const [noActionOnly, setNoActionOnly] = useState(false);
   const [lens, setLens] = useState<LensKey | null>(null);
   const [band, setBand] = useState<string | null>(null);
   // Visa topp 25 som standard – listan är rangordnad, så de viktigaste syns
@@ -62,10 +66,12 @@ export function PriorityList({ rows }: { rows: PriorityStudent[] }) {
   const CAP = 25;
 
   const bandTest = BANDS.find((b) => b.key === band)?.test;
+  const hasAction = (id: string) => actions.some((a) => a.student_id === id);
   const shown = rows.filter(
     (r) =>
       (!multiOnly || r.lenses.length >= 2) &&
       (!gapOnly || r.formalGap) &&
+      (!noActionOnly || !hasAction(r.student_id)) &&
       (!lens || r.lenses.some((l) => l.key === lens)) &&
       (!bandTest || bandTest(r.grade_level)),
   );
@@ -86,6 +92,9 @@ export function PriorityList({ rows }: { rows: PriorityStudent[] }) {
           <span className="mx-1 hidden h-4 w-px bg-[var(--border-subtle)] sm:inline-block" aria-hidden />
           <Chip active={gapOnly} onClick={() => setGapOnly((v) => !v)}>
             Utan formell stödprocess
+          </Chip>
+          <Chip active={noActionOnly} onClick={() => setNoActionOnly((v) => !v)}>
+            Utan påbörjad åtgärd
           </Chip>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -148,6 +157,11 @@ export function PriorityList({ rows }: { rows: PriorityStudent[] }) {
                     <span className="font-normal opacity-80">· {l.detail}</span>
                   </span>
                 ))}
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-3">
+                <ActionStatusPill studentId={r.student_id} />
+                <ActionEditor studentId={r.student_id} />
               </div>
             </Card>
           ))}

@@ -1,7 +1,8 @@
 # Vision-progress
 
-## ⛔ LOOP STOPPED — do not self-schedule. If a stray ScheduleWakeup fires, HALT immediately and do
-## not reschedule. Only resume if the user explicitly types `/loop …` again.
+## ▶️ LOOP ACTIVE (user-invoked /loop 2026-06-12) — work through "🎯 VIKTIGAST KVAR MOT VISIONEN"
+## top-down, one item per iteration: implement, verify (seed-invariants, tsc, eslint, build, preview),
+## **commit locally WITHOUT push**, update changelog + this header. Loop until the user says "stop".
 
 ## 🔁 HANDOFF — current state (read this first)
 
@@ -11,9 +12,9 @@
 ~3 min). Pages source = "GitHub Actions". Build basePath is set by the workflow to `/app-school-insight`.
 Status when last left: **green, site verified working** by the user. Ready for the first test group.
 
-**Status:** ⚠️ **BUILT LOCALLY, NOT PUSHED** — the multi-school/utbildningschef + actionability
-iteration (below) is committed locally and awaits the user's review before push (user's explicit
-instruction 2026-06-11: "pusha inget till git förrän jag har tittat närmare på det").
+**Status:** ✅ **PUSHED & DEPLOYED** (2026-06-11, after the user's local review) — the multi-school/
+utbildningschef + actionability iteration is live. Schools renamed at review: **Framtidsskolan
+liten/mellan/stor** (ids ALV/FRA/BJO unchanged).
 
 **Testgroup feedback (first round, 2026-06-11):** positive overall; wants more överskådlighet, less
 överflödighet. Skolledare quote (now a design principle): *"Jag vill inte ha mer data – jag vill veta
@@ -43,38 +44,77 @@ vad jag ska göra och varför det ser ut som det gör."* → answered by "Veckan
 - Verified: tsc+eslint clean, `next build` green (+/huvudman +3 skolkort), preview-tested (role
   gating, fokus cards, caps 25/112, collapsed disclosures, FRA start page identical), 0 console errors.
 
-**REMAINING from the planned scale pass:** scope picker (stadium/arbetslag default narrowing) and
-lärare-defaults-to-own-classes — caps shipped; picker deferred until a real >400-elev school is browsable.
+## 🎯 VIKTIGAST KVAR MOT VISIONEN (gap-analys 2026-06-12, viktigast först)
 
-**Open (optional) follow-ups:**
-4. "Till testgruppen" intro/feedback note on the start page (needs the user's feedback channel).
-5. Multi-year frånvarotrend as a /prioritera lens (data exists in `attendance_term_history`).
-6. **Närvaroprocess-status per flaggad elev** (demo-store, like insatser): which escalation step is the
-   student on (registrerad → vårdnadshavare kontaktad → kartläggning → elevhälsa → fördjupad utredning/
-   samverkan), who owns the next step. Replaces the REJECTED "frånvarotrappa med procentnivåer" idea —
-   user provided research (2026-06): Skolverket no longer promotes fixed percentage tiers; the modern
-   framing is systematiskt närvaroarbete (främjande/förebyggande/upptäckande/åtgärdande). The app's
-   existing thresholds stay as transparent MODEL signals only — never present them as official language.
-7. **Milstolpevy för matematik (kumulativa grindar)** — flag MISSED critical gates rather than
-   current average level: taluppfattning (åk 1–3), automatiserade tabeller (åk 3–4), bråk/rationella
-   tal (åk 4–6 — strongest research predictor for algebra), pre-algebra (åk 6–7). Same datapoints
-   read smarter, zero new assessments. A student can look "i linje" on average while missing a gate
-   that breaks them two years later. Reading equivalent: avkodningsfönstret åk 1–2 (respond with
-   intensity, don't add measurement).
-8. **Frame LSR features as stöd för läsa-skriva-räkna-garantin** (skollagen 3 kap): the garanti
-   already mandates exactly what the app does — kartläggning, tidig upptäckt, insats direkt,
-   uppföljning, överlämning mellan stadier. Use that language on the LSR surfaces (start card,
-   analys, årskurs 1–4). NOTE: a new guiding principle "No New Reporting Burden" was added to
-   docs/vision.md (2026-06) — appen ber aldrig lärare rapportera något som inte redan ska registreras;
-   tät uppföljning endast inom pågående insats.
-9. **Migration from sibling repo `app-predict-absence`** (surveyed 2026-06-10, ~500 students/8 schools,
-   trained joblib models daily+chronic+lesson, SHAP top-5, Vklass lesson data, Skola24 schedules; FastAPI
-   is thin — all scoring is batch): **Fas B** = Frånvaroprognos view via a Python scoring step in the
-   build (features.py on our attendance → predictions + SHAP into baked SQLite; behörighetsprognos-style
-   UX, SHAP waterfall on elev page; retrain on our data in-build if calibration matters). **Fas C** =
-   port class_schedules + lesson-level attendance into the seed → schema-risk view; merge with the
-   multi-school/utbildningschef iteration (their generator already does 8 schools F–9 — note F–9 vs our
-   åk 1–10 mapping). Their Recharts frontend is NOT ported (our ECharts + primitives stay).
+Fresh gap analysis of `docs/vision.md` vs the live app. The app is now strong on success measures
+1–2 (understanding + early identification: fem linser, fyra läsårs historik, resultatmatris,
+huvudmannanivå). The remaining gaps cluster around measures **3–5** (allocation, outcomes, potential)
+and the **teacher persona**. Prioritized order below — implement top-down unless testgroup feedback
+reorders. *Analysis only — nothing below is built.*
+
+1. ~~**Från insikt till handling: åtgärdsloop per prioriterad elev**~~ ✅ _done, loop-iter 1 (2026-06-12,
+   committed locally)_ — see changelog. (vision: "Actionable Insights",
+   success measures 3+4; skolledare-criterion "whether interventions are producing measurable results").
+   THE systemic gap: the app identifies and suggests, but **acting leaves no trace**. A demo-store
+   workflow (like insatser/kommentarer, localStorage): per flaggad/prioriterad elev record status,
+   ansvarig and nästa steg — for frånvaro along the escalation process (registrerad → vårdnadshavare
+   kontaktad → kartläggning → elevhälsa → fördjupad utredning/samverkan). Then /prioritera shows
+   "hanteras / ej påbörjad", and /ledning can answer the killer question "har varje prioriterad elev
+   en pågående åtgärd?" (today only insatser have uppföljning). Absorbs old follow-up #6. NOTE: the
+   "frånvarotrappa med procentnivåer" framing remains REJECTED (Skolverket promotes systematiskt
+   närvaroarbete, not fixed tiers) — the process steps are a workflow, never displayed as nivåer.
+   This single feature converts the identification machinery into outcomes — highest leverage left.
+
+2. **Lärarens ingång: "Mina klasser"** (vision: the entire "For Teachers" success section — the least
+   served of the four personas; elevhälsa has /prioritera+/tidig, skolledare /ledning, utbildningschef
+   /huvudman, läraren has only generic views). Mentor identity exists in data
+   (`classes.mentor_staff_id`). Demo shape: lärare role gets a mentor-scoped landing ("Mina klasser":
+   own classes' elevlista, who needs support/challenge, frånvaro grid, what changed since last week)
+   instead of whole-school views. Also closes the remaining scale-pass items (lärare defaults to own
+   classes; scope picker stadium/arbetslag on the worklists for the big-school case).
+
+3. **Tidigast möjliga upptäckt i basfärdigheter: milstolpevy + garanti-inramning** (vision: "Early
+   Identification" at maximum leverage + the user's stated deepest priority — läsa/skriva/räkna rätt
+   från början, matematikens kumulativitet). Merge of old follow-ups #7+#8:
+   - **Milstolpar/grindar för matematik**: flag MISSED critical gates rather than average level —
+     taluppfattning (åk 1–3), automatiserade tabeller (åk 3–4), bråk/rationella tal (åk 4–6, strongest
+     research predictor for algebra), pre-algebra (åk 6–7). Same datapoints read smarter, zero new
+     assessments (a student can look "i linje" on average while missing a gate that breaks them two
+     years later). Reading equivalent: avkodningsfönstret åk 1–2 — respond with intensity, don't add
+     measurement.
+   - **Rama in LSR-ytorna som stöd för läsa-skriva-räkna-garantin** (skollagen 3 kap): garantin
+     mandates exactly what the app does (kartläggning → tidig upptäckt → insats direkt → uppföljning →
+     överlämning). Use that language on start-kortet, Analys and årskurs 1–4. Honors the "No New
+     Reporting Burden" principle added to vision.md 2026-06.
+
+4. **Frånvaroprognos — migration fas B från `app-predict-absence`** (vision: "Early Identification";
+   surveyed 2026-06-10: ~500 students/8 schools, trained joblib models daily+chronic+lesson, SHAP
+   top-5, Vklass lesson data, Skola24 schedules; FastAPI is thin — all scoring is batch). **Fas B** =
+   Frånvaroprognos view via a Python scoring step in the build (features.py on our attendance →
+   predictions + SHAP into baked SQLite; behörighetsprognos-style UX with disclosure; SHAP waterfall
+   on elev page; retrain on our data in-build if calibration matters — labels like "Låg 29 %" must be
+   calibrated or expressed as expected days). **Fas C** (later) = port class_schedules + lesson-level
+   attendance into the seed → schema-risk view (note F–9 vs our åk 1–10 mapping). Their Recharts
+   frontend is NOT ported. Ranked below 1–3 because prediction adds marginal *earliness* on top of
+   five existing lenses, while 1–3 convert existing identification into action.
+
+5. **Resurssimulering — "vad händer om"** (vision: success measure 3 "more effective allocation of
+   resources and support"; skolledare-criterion "how resources and staffing align with needs").
+   Behov↔resurser is descriptive today; the decision it should support is t.ex. "flytta 0,5
+   speciallärartjänst från mellan- till högstadiet" or "vad kostar att täcka åk 10:s saknade
+   spec-resurs". A light client-side simulering (sliders over FTE per arbetslag → recomputed
+   flaggade-per-spec.tjänst + elevpeng-konsekvens) = spec §19's "simuleringsläge", scoped small.
+
+6. **Trygghet över tid** (vision: "Trends in … wellbeing"): wellbeing är det ENDA måttet utan
+   longitudinell linje (2 terminer; allt annat har 8). Small seed addition (wellbeing history per
+   termin, samma backward-walk-mönster) + trygghet line in befintliga över-tid-sektioner (elev,
+   ledning, skolkort). Cheap, completes the longitudinal story.
+
+7. **Smått / medvetna beslut:**
+   - "Till testgruppen"-notis på startsidan (väntar på användarens val av feedbackkanal).
+   - Flerårig frånvarotrend som extra /prioritera-lins (data finns i `attendance_term_history`).
+   - **Vårdnadshavar-/elevperspektivet**: the one vision-adjacent stakeholder entirely absent —
+     out of demo scope is a legitimate choice, but make it consciously (note in README/spec).
 
 **App:** Skolinsikt, a Swedish school-data demo (Next.js 16 / React 19 / Tailwind v4 / ECharts,
 SQLite baked at build time → static site). Fictional Göteborg grundskola **Framtidsskolan**, åk 1–10,
@@ -112,8 +152,9 @@ server before `npm run seed`, then restart** (preview_stop → seed → preview_
 streams (curated scenarios untouched by demographic fields). Verify with `npx tsc --noEmit`,
 `npx eslint <files>`, and `npm run build`.
 
-**Loop status:** STOPPED. Vision (`docs/vision.md`) is fulfilled; remaining work is polish/new
-directions only.
+**Loop status:** STOPPED. The ORIGINAL backlog (below) is fulfilled; the current prioritized gap
+analysis against `docs/vision.md` lives in the "🎯 VIKTIGAST KVAR MOT VISIONEN" section above —
+that list (not this old note) is the source of truth for what to build next.
 
 ---
 
@@ -205,6 +246,20 @@ better decisions that improve student outcomes?* — weighted toward **early ide
 > printable variants per role, an elevhälsa case-note workflow, or richer per-subject trends.
 
 ## Changelog
+
+- _loop-iter 1_ ✅ (2026-06-12): **åtgärdsloop per prioriterad elev** (gap-list #1) — closes the
+  identify→act loop. Demo-store extended with `actions: StudentAction[]` (student_id, step, ansvarig,
+  updated; upsert via `setAction`/`removeAction`, cleared by Återställ demodata). Process steps in
+  `lib/constants.ts` (`ATGARD_STEPS`: kontakt → kartläggning → elevhälsa → utredning → avslutad — a
+  WORKFLOW, never displayed as nivåer per the rejected-trappa decision). New
+  `components/student-action.tsx`: `ActionStatusPill` ("Åtgärd ej påbörjad" / step), `ActionEditor`
+  (select + ansvarig, Spara/Ta bort), `StudentActionPanel` (elev page section "Pågående åtgärd"),
+  `ActionCoverage` (ledning section "Åtgärdstäckning": "X av 112 prioriterade elever har en påbörjad
+  åtgärd" + bar). /prioritera cards got status pill + editor + new filter chip "Utan påbörjad åtgärd".
+  Verified end-to-end in preview: starta åtgärd på /prioritera (S8B16, Kartläggning/Kurator) → syns på
+  elevsidan + räknas på /ledning (1 av 112) → filter exkluderar (112→111) → Återställ demodata rensar
+  (1→0; ⚠️ reset uses window.confirm — stub it in automated tests). tsc+eslint clean, build green,
+  0 console errors. **Committed locally, NOT pushed.**
 
 - _iter 1_ ✅: gap analysis written; shipped the **Tidig upptäckt** early-warning view (explainable
   per-student risk model + ranked, actionable list + per-årskurs concentration chart). tsc clean,

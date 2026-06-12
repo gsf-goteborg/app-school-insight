@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PageHeader, Card, Section, Stat, Pill, Note } from "@/components/ui/primitives";
 import { LineChart, BarChart } from "@/components/charts";
 import { InterventionList } from "@/components/intervention-list";
+import { StudentActionPanel } from "@/components/student-action";
 import { CommentThread } from "@/components/comment-thread";
 import {
   getStudent, getStudentAttendance, getStudentAttendanceTimeline,
@@ -318,6 +319,14 @@ export default async function ElevPage({ params }: { params: Promise<{ studentId
         description="Alla terminer med registrerad bedömning – upp till fyra läsår. Trenden beräknas över hela serien: de två första terminerna jämförs med de två senaste (minst tre terminer krävs)."
       >
         <KnowledgeTrajectory studentId={studentId} grade={grade} />
+      </Section>
+
+      {/* Åtgärdsloop: var i processen är vi, vem äger nästa steg */}
+      <Section
+        title="Pågående åtgärd"
+        description="Var i stödprocessen eleven befinner sig och vem som äger nästa steg – så att en prioriterad elev aldrig blir liggande utan ägare."
+      >
+        <StudentActionPanel studentId={studentId} />
       </Section>
 
       {/* Insatser, tidslinje, kommentarer */}
