@@ -4,6 +4,7 @@ import { Fragebank } from "@/components/ui/questions";
 import { Heatmap, SankeyChart, BarChart } from "@/components/charts";
 import { AnalysScatter } from "@/components/analys-scatter";
 import { ResultMatrix } from "@/components/result-matrix";
+import { Milestones } from "@/components/milestones";
 import {
   getWeekdayAbsence, getAbsenceVsMerit, getReadingLevelFlow, getAverageMerit,
 } from "@/lib/db/queries";
@@ -141,6 +142,13 @@ export default function AnalysPage() {
           Vilka elever som rör sig – och åt vilket håll – syns per elev i resultatmatrisen nedan; &quot;kan utmanas
           mer&quot; markeras dessutom i respektive klass elevlista.
         </p>
+      </Section>
+
+      <Section
+        title="Milstolpar i basfärdigheter"
+        description="Kumulativa grindar i läsning och matematik: en elev kan se 'i linje' ut i snitt men ha missat ett kritiskt delmoment som bryter igenom flera år senare. Samma mätpunkter – lästa smartare."
+      >
+        <Milestones />
       </Section>
 
       <Section

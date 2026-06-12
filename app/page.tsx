@@ -198,6 +198,10 @@ export default function StartPage() {
               Störst behov i {lsrWorst.label.toLowerCase()} – <Highlight tone={lsrTone}>{pct(lsrWorst.share, 0)}</Highlight>{" "}
               av eleverna behöver uppmärksammas.
             </p>
+            <p className="mt-2 text-sm text-[var(--text-muted)]">
+              Stöd för <strong>läsa-skriva-räkna-garantin</strong> (skollagen 3 kap): tidig upptäckt →
+              insats direkt → uppföljning → överlämning. Milstolparna per delmoment finns i Analys.
+            </p>
           </div>
         </SummaryCard>
       </div>

@@ -74,7 +74,8 @@ reorders. *Analysis only — nothing below is built.*
    instead of whole-school views. Also closes the remaining scale-pass items (lärare defaults to own
    classes; scope picker stadium/arbetslag on the worklists for the big-school case).
 
-3. **Tidigast möjliga upptäckt i basfärdigheter: milstolpevy + garanti-inramning** (vision: "Early
+3. ~~**Tidigast möjliga upptäckt i basfärdigheter: milstolpevy + garanti-inramning**~~ ✅ _done,
+   loop-iter 3 (2026-06-12, committed locally)_ — see changelog. (vision: "Early
    Identification" at maximum leverage + the user's stated deepest priority — läsa/skriva/räkna rätt
    från början, matematikens kumulativitet). Merge of old follow-ups #7+#8:
    - **Milstolpar/grindar för matematik**: flag MISSED critical gates rather than average level —
@@ -248,6 +249,18 @@ better decisions that improve student outcomes?* — weighted toward **early ide
 
 ## Changelog
 
+- _loop-iter 3_ ✅ (2026-06-12): **milstolpar i basfärdigheter + garanti-inramning** (gap-list #3).
+  `lib/db/queries-milestones.ts`: 5 gates (avkodning åk 2 / taluppfattning åk 3 / räknefärdighet åk 4 /
+  bråk åk 6 / pre-algebra åk 7) read from EXISTING measurements at VT of the year the student was in
+  the gate's årskurs (4-läsår history; older → "okänd"; in gate's årskurs now + stort behov → "riskzon").
+  No new assessments (No New Reporting Burden). `components/milestones.tsx` on **Analys**: per-gate
+  klarad/missad/riskzon bars (demo: bråk-grinden worst, 59 % klarade — consistent with matte-scenariot),
+  worklist cap 12 sorted "utan stödprocess + flest missade först" (140 missad-utan-stödprocess pill),
+  "Så avläses grindarna"-Disclosure + garanti-Note. **Start-page LSR card** got the garanti framing
+  (skollagen 3 kap, tidig upptäckt → insats → uppföljning → överlämning + pointer to Analys).
+  ⚠️ Verify-gotcha: /analys looked empty in preview because the browser profile still had role=Lärare
+  from iter 2 (gating working as intended) — switch role before checking. tsc+eslint clean, build
+  green, 0 console errors. **Committed locally, NOT pushed.**
 - _loop-iter 2_ ✅ (2026-06-12): **lärarens "Mina klasser"** (gap-list #2) — the teacher persona's own
   entry point. New view `/mina-klasser` (nav for larare+forstelarare, view key "mina", placed right
   after start). RSC bakes a compact payload for ALL 20 classes (`getClassOverview` + flagged from
