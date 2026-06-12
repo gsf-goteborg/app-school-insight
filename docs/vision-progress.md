@@ -65,7 +65,8 @@ reorders. *Analysis only — nothing below is built.*
    närvaroarbete, not fixed tiers) — the process steps are a workflow, never displayed as nivåer.
    This single feature converts the identification machinery into outcomes — highest leverage left.
 
-2. **Lärarens ingång: "Mina klasser"** (vision: the entire "For Teachers" success section — the least
+2. ~~**Lärarens ingång: "Mina klasser"**~~ ✅ _done, loop-iter 2 (2026-06-12, committed locally)_ —
+   see changelog. (vision: the entire "For Teachers" success section — the least
    served of the four personas; elevhälsa has /prioritera+/tidig, skolledare /ledning, utbildningschef
    /huvudman, läraren has only generic views). Mentor identity exists in data
    (`classes.mentor_staff_id`). Demo shape: lärare role gets a mentor-scoped landing ("Mina klasser":
@@ -247,6 +248,19 @@ better decisions that improve student outcomes?* — weighted toward **early ide
 
 ## Changelog
 
+- _loop-iter 2_ ✅ (2026-06-12): **lärarens "Mina klasser"** (gap-list #2) — the teacher persona's own
+  entry point. New view `/mina-klasser` (nav for larare+forstelarare, view key "mina", placed right
+  after start). RSC bakes a compact payload for ALL 20 classes (`getClassOverview` + flagged from
+  `getEarlyWarnings` + stretch/tappar from `getDevelopment`); client `components/my-classes.tsx`
+  filters to the teacher's own selection — class picker chips persisted in localStorage
+  (`skolinsikt-mina-klasser`, default ["8A"], useSyncExternalStore pattern like role-provider). Per
+  class: attention pill + närvaro/trygghet/mentor, "Att prata med den här veckan" (flagged students
+  w/ risk level + **ActionStatusPill from loop-iter 1** + suggested action, links to elev), and a
+  compact "Kan utmanas mer / Tappar mark" name row. Demo note explains tjänstefördelning would drive
+  this in production. Verified live: default 8A (6 flagged), toggle 2B (11 flagged incl. Hög-elev),
+  selection survives reload, nav shows for Lärare; tsc+eslint clean, build green, 0 console errors.
+  **Committed locally, NOT pushed.** NOTE: scope-picker remainder from the scale pass is largely
+  superseded for teachers by this view (they now have a natural narrow default).
 - _loop-iter 1_ ✅ (2026-06-12): **åtgärdsloop per prioriterad elev** (gap-list #1) — closes the
   identify→act loop. Demo-store extended with `actions: StudentAction[]` (student_id, step, ansvarig,
   updated; upsert via `setAction`/`removeAction`, cleared by Återställ demodata). Process steps in

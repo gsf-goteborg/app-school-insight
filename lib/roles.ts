@@ -44,6 +44,7 @@ export const DEFAULT_ROLE: RoleKey = "skolledare";
 export type ViewKey =
   | "start"
   | "huvudman"
+  | "mina"
   | "ledning"
   | "prioritera"
   | "tidig"
@@ -72,6 +73,8 @@ const ALL: RoleKey[] = ["skolledare", "elevhalsa", "forstelarare", "larare"];
 export const NAV: NavItem[] = [
   { view: "huvudman", label: "Mina skolor", href: "/huvudman", roles: ["utbildningschef"] },
   { view: "start", label: "Skolans nuläge", href: "/", roles: ALL },
+  // Lärarens/förstelärarens primära ingång: egna klasser i stället för helskolevyer.
+  { view: "mina", label: "Mina klasser", href: "/mina-klasser", roles: ["larare", "forstelarare"] },
   { view: "ledning", label: "Ledningsöversikt", href: "/ledning", roles: ["skolledare"] },
   { view: "prioritera", label: "Prioriterade elever", href: "/prioritera", roles: ALL },
   { view: "tidig", label: "Tidig upptäckt", href: "/tidig-upptackt", roles: ALL },
