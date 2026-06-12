@@ -3,6 +3,7 @@ import { PageHeader, Card, Section, Stat, Pill, Note } from "@/components/ui/pri
 import { LineChart, BarChart } from "@/components/charts";
 import { InterventionList } from "@/components/intervention-list";
 import { StudentActionPanel } from "@/components/student-action";
+import { AbsenceForecastCard } from "@/components/absence-forecast";
 import { CommentThread } from "@/components/comment-thread";
 import {
   getStudent, getStudentAttendance, getStudentAttendanceTimeline,
@@ -257,6 +258,9 @@ export default async function ElevPage({ params }: { params: Promise<{ studentId
               />
             </Card>
           )}
+        </div>
+        <div className="mt-6">
+          <AbsenceForecastCard studentId={studentId} />
         </div>
       </Section>
 

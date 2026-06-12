@@ -2,6 +2,7 @@ import { RoleGate } from "@/components/role-gate";
 import { PageHeader, Card, Section, Stat, Pill, Note, Disclosure } from "@/components/ui/primitives";
 import { BarChart } from "@/components/charts";
 import { EarlyWarningList } from "@/components/early-warning-list";
+import { AbsenceForecastSection } from "@/components/absence-forecast";
 import {
   getEarlyWarnings, getEarlyWarningSummary,
   RISK_LEVELS, RISK_SIGNALS, RISK_MIN_FLAG,
@@ -54,6 +55,13 @@ export default function TidigUpptacktPage() {
         description="Elever sorterade efter samlad signalstyrka. Varje rad visar de underliggande skälen och ett förslag på nästa steg."
       >
         <EarlyWarningList rows={rows} bevaka={summary.bevaka} />
+      </Section>
+
+      <Section
+        title="Frånvaroprognos – kommande vecka"
+        description="Vem behöver kontakt innan måndag morgon? Förväntade frånvarodagar nästa vecka plus risken att frånvaron blir bestående (kronisk). Illustrativ och helt förklarbar modell."
+      >
+        <AbsenceForecastSection />
       </Section>
 
       <Disclosure

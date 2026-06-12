@@ -89,7 +89,10 @@ reorders. *Analysis only — nothing below is built.*
      överlämning). Use that language on start-kortet, Analys and årskurs 1–4. Honors the "No New
      Reporting Burden" principle added to vision.md 2026-06.
 
-4. **Frånvaroprognos — migration fas B från `app-predict-absence`** (vision: "Early Identification";
+4. ~~**Frånvaroprognos — migration fas B**~~ ✅ _done som PLAN B, loop-iter 4 (2026-06-12, committed
+   locally)_ — see changelog. ⚠️ Joblib-spåret är BLOCKERAT tills användaren uttryckligen godkänner
+   pickle-avserialisering från syskonrepot (säkerhetsklassificeraren stoppade det, korrekt — pickle
+   kör godtycklig kod). UX:en är byggd; modellerna kan bytas in senare. (Original: vision: "Early Identification";
    surveyed 2026-06-10: ~500 students/8 schools, trained joblib models daily+chronic+lesson, SHAP
    top-5, Vklass lesson data, Skola24 schedules; FastAPI is thin — all scoring is batch). **Fas B** =
    Frånvaroprognos view via a Python scoring step in the build (features.py on our attendance →
@@ -249,6 +252,19 @@ better decisions that improve student outcomes?* — weighted toward **early ide
 
 ## Changelog
 
+- _loop-iter 4_ ✅ (2026-06-12): **frånvaroprognos** (gap-list #4, shipped as PLAN B — transparent
+  additiv modell i stället för joblib-migrering; security classifier blocked pickle-deserialization
+  from the sibling repo, rightly — needs explicit user authorization, UX is model-swappable later).
+  `lib/db/queries-prognos.ts`: per elev (FRA) **förväntade frånvarodagar nästa vecka** (0–5; additivt:
+  bas = rullande 4-veckorsandel + veckodagsmönster ×0,5 + trend ×0,6 + pågående frånvaro +15 p.e. på
+  måndag + låg trygghet) och **kronisk risk** (logistisk, exponerade vikter: nivå ×16, trend ×8,
+  flerårsdrift ×20 från terminshistoriken, ogiltig-andel, trygghet; Hög ≥50 %, Förhöjd ≥25 %).
+  Kalibreringsbeslutet från mockup-diskussionen inbyggt: visar DAGAR, inte rå procent. Exakta
+  faktorbidrag (additiv modell → ingen SHAP-approximation behövs). Ytor: **Tidig upptäckt** topplista
+  "kommande vecka" (topp 10 + summary-pills 39 Hög/16 ≥1,5 dagar + Disclosure med alla vikter);
+  **elevsidan** prognoskort i Närvaro-sektionen (dagar + kronisk pill + faktorstaplar). Verified live
+  (S8B18: 37 % → 2,6 av 5 dagar, kronisk 99 %, 5 faktorstaplar), tsc+eslint clean, build green,
+  0 console errors. **Committed locally, NOT pushed.**
 - _loop-iter 3_ ✅ (2026-06-12): **milstolpar i basfärdigheter + garanti-inramning** (gap-list #3).
   `lib/db/queries-milestones.ts`: 5 gates (avkodning åk 2 / taluppfattning åk 3 / räknefärdighet åk 4 /
   bråk åk 6 / pre-algebra åk 7) read from EXISTING measurements at VT of the year the student was in
